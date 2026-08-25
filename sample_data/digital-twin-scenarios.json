@@ -1,0 +1,77 @@
+[
+  {
+    "id": "scenario-01",
+    "junction_id": "jnc-cp-01",
+    "junction_name": "Connaught Place Radial Intersection",
+    "name": "Dynamic Signal Phase Reallocation (+25s Green for North Inflow)",
+    "description": "Allocates +25s green time dynamically to outer radial during peak morning congestion.",
+    "current_metrics": {
+      "avg_delay_sec": 78.4,
+      "queue_length_m": 240,
+      "hourly_throughput": 3200,
+      "congestion_index": 0.82
+    },
+    "simulated_metrics": {
+      "avg_delay_sec": 44.1,
+      "queue_length_m": 110,
+      "hourly_throughput": 4150,
+      "congestion_index": 0.46
+    },
+    "delta_percentage": {
+      "delay_reduction": -43.7,
+      "queue_reduction": -54.2,
+      "throughput_gain": 29.7
+    },
+    "recommendation": "Deploy during 08:30 - 11:30 AM peak rush."
+  },
+  {
+    "id": "scenario-02",
+    "junction_id": "jnc-cp-01",
+    "junction_name": "Connaught Place Radial Intersection",
+    "name": "Lane 2 Closure (Simulated Pipeline Repair / Roadwork)",
+    "description": "Simulates bottleneck impact when center lane is closed for utility maintenance.",
+    "current_metrics": {
+      "avg_delay_sec": 48.0,
+      "queue_length_m": 120,
+      "hourly_throughput": 3800,
+      "congestion_index": 0.50
+    },
+    "simulated_metrics": {
+      "avg_delay_sec": 112.5,
+      "queue_length_m": 420,
+      "hourly_throughput": 2100,
+      "congestion_index": 0.94
+    },
+    "delta_percentage": {
+      "delay_reduction": 134.4,
+      "queue_reduction": 250.0,
+      "throughput_gain": -44.7
+    },
+    "recommendation": "Mandate detour via Barakhamba Road before initiating roadwork."
+  },
+  {
+    "id": "scenario-03",
+    "junction_id": "jnc-aiims-01",
+    "junction_name": "AIIMS Medical Flyover Junction",
+    "name": "ResQRoute Emergency Green Wave Priority Wave",
+    "description": "Preemptively turns all intersection phases green 90s prior to inbound emergency ambulance.",
+    "current_metrics": {
+      "avg_delay_sec": 95.0,
+      "queue_length_m": 310,
+      "hourly_throughput": 3000,
+      "congestion_index": 0.88
+    },
+    "simulated_metrics": {
+      "avg_delay_sec": 18.2,
+      "queue_length_m": 35,
+      "hourly_throughput": 3400,
+      "congestion_index": 0.22
+    },
+    "delta_percentage": {
+      "delay_reduction": -80.8,
+      "queue_reduction": -88.7,
+      "throughput_gain": 13.3
+    },
+    "recommendation": "Activate automated signal controller integration with ResQRoute dispatch."
+  }
+]

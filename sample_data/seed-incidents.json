@@ -1,0 +1,44 @@
+[
+  {
+    "id": "inc-01",
+    "incident_type": "stopped_too_long",
+    "camera_id": "cam-03",
+    "camera_name": "Ring Road South Ext Flyover",
+    "vehicle_plate": "UP16KL2345",
+    "vehicle_type": "motorbike",
+    "confidence": 0.94,
+    "duration_seconds": 185,
+    "road_segment": "Mahatma Gandhi Ring Road",
+    "severity": "medium",
+    "details": "Vehicle stationary in right active transit lane for > 3 minutes; potential breakdown/hazard.",
+    "evidence_url": "sample_data/snapshots/inc_01_stalled.jpg"
+  },
+  {
+    "id": "inc-02",
+    "incident_type": "wrong_direction",
+    "camera_id": "cam-01",
+    "camera_name": "Connaught Place Radial-1",
+    "vehicle_plate": "KA03EF9012",
+    "vehicle_type": "truck",
+    "confidence": 0.91,
+    "speed_kmh": 32.0,
+    "road_segment": "CP Outer Circle North",
+    "severity": "high",
+    "details": "Heading 270 deg opposing tagged one-way corridor flow (90 deg normal). Restricted commercial vehicle.",
+    "evidence_url": "sample_data/snapshots/inc_02_wrongway.jpg"
+  },
+  {
+    "id": "inc-03",
+    "incident_type": "sudden_deceleration",
+    "camera_id": "cam-05",
+    "camera_name": "Cyber Hub Express Tollway",
+    "vehicle_plate": "MH02CD5678",
+    "vehicle_type": "suv",
+    "confidence": 0.88,
+    "speed_drop_kmh": 48.5,
+    "road_segment": "NH-48 Express Highway",
+    "severity": "high",
+    "details": "Rapid deceleration from 78 km/h to 12 km/h within 1.8 seconds. Near-miss collision anomaly.",
+    "evidence_url": "sample_data/snapshots/inc_03_decel.jpg"
+  }
+]

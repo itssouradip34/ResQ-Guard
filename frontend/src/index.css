@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #050b14;
+  color: #f1f5f9;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0b1524;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e3a5f;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00e5ff;
+}
+
+/* Leaflet Map overrides for dark mode command center */
+.leaflet-container {
+  background: #070e1a !important;
+  font-family: inherit;
+}
+
+.leaflet-popup-content-wrapper {
+  background: rgba(11, 25, 44, 0.92) !important;
+  backdrop-filter: blur(12px);
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(0, 229, 255, 0.3) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+}
+
+.leaflet-popup-tip {
+  background: rgba(11, 25, 44, 0.92) !important;
+}
+
+.glow-cyan {
+  box-shadow: 0 0 15px rgba(0, 229, 255, 0.35);
+}
+
+.glow-red {
+  box-shadow: 0 0 15px rgba(255, 23, 68, 0.45);
+}
+
+.glow-green {
+  box-shadow: 0 0 15px rgba(0, 230, 118, 0.35);
+}

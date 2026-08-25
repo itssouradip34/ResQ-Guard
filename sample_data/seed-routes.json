@@ -1,0 +1,60 @@
+[
+  {
+    "id": "corridor-aiims-01",
+    "name": "Connaught Place to AIIMS Trauma Centre (Emergency Corridor Alpha)",
+    "vehicle_id": "DL08MN6789",
+    "vehicle_plate": "DL08MN6789",
+    "vehicle_type": "ambulance",
+    "origin": {
+      "name": "Connaught Place Central Radial",
+      "lat": 28.6315,
+      "lng": 77.2167
+    },
+    "destination": {
+      "name": "AIIMS Trauma Centre Emergency Ward",
+      "lat": 28.5672,
+      "lng": 77.2100
+    },
+    "normal_route": {
+      "distance_km": 8.4,
+      "estimated_time_min": 26.5,
+      "average_speed_kmh": 19.0,
+      "congestion_delay_min": 11.2,
+      "signals_encountered": 9,
+      "signals_delayed": 6,
+      "waypoints": [
+        [28.6315, 77.2167],
+        [28.6250, 77.2180],
+        [28.6180, 77.2200],
+        [28.6129, 77.2295],
+        [28.5950, 77.2250],
+        [28.5800, 77.2220],
+        [28.5700, 77.2200],
+        [28.5672, 77.2100]
+      ]
+    },
+    "optimized_resq_corridor": {
+      "distance_km": 7.9,
+      "estimated_time_min": 12.8,
+      "average_speed_kmh": 37.0,
+      "congestion_delay_min": 1.4,
+      "signals_encountered": 7,
+      "signals_cleared_green": 7,
+      "time_saved_min": 13.7,
+      "time_saved_pct": 51.7,
+      "waypoints": [
+        [28.6315, 77.2167],
+        [28.6200, 77.2130],
+        [28.6050, 77.2110],
+        [28.5900, 77.2105],
+        [28.5750, 77.2095],
+        [28.5672, 77.2100]
+      ],
+      "cleared_intersections": [
+        {"name": "Janpath - Tolstoy Marg Crossing", "status": "green_locked", "camera_id": "cam-01"},
+        {"name": "Prithviraj Road Junction", "status": "green_locked", "camera_id": "cam-02"},
+        {"name": "Ring Road - AIIMS Flyover Underpass", "status": "green_locked", "camera_id": "cam-04"}
+      ]
+    }
+  }
+]

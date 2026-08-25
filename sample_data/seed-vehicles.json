@@ -1,0 +1,58 @@
+[
+  {
+    "plate_number": "DL01AB1234",
+    "vehicle_type": "car",
+    "color": "White",
+    "is_blacklisted": true,
+    "blacklist_reason": "Suspected in interstate robbery case (FIR #402/2026)",
+    "dna_embedding": [0.82, 0.12, 0.05, 0.45, 0.78, 0.33, 0.19, 0.91]
+  },
+  {
+    "plate_number": "MH02CD5678",
+    "vehicle_type": "suv",
+    "color": "Black",
+    "is_blacklisted": true,
+    "blacklist_reason": "Stolen luxury vehicle report from South Mumbai",
+    "dna_embedding": [0.15, 0.18, 0.20, 0.88, 0.65, 0.92, 0.41, 0.73]
+  },
+  {
+    "plate_number": "KA03EF9012",
+    "vehicle_type": "truck",
+    "color": "Yellow",
+    "is_blacklisted": false,
+    "blacklist_reason": null,
+    "dna_embedding": [0.75, 0.80, 0.10, 0.30, 0.40, 0.25, 0.60, 0.55]
+  },
+  {
+    "plate_number": "MP04GH3456",
+    "vehicle_type": "car",
+    "color": "Silver",
+    "is_blacklisted": false,
+    "blacklist_reason": null,
+    "dna_embedding": [0.65, 0.68, 0.70, 0.22, 0.51, 0.39, 0.81, 0.47]
+  },
+  {
+    "plate_number": "HR26IJ7890",
+    "vehicle_type": "bus",
+    "color": "Blue",
+    "is_blacklisted": false,
+    "blacklist_reason": null,
+    "dna_embedding": [0.10, 0.30, 0.85, 0.60, 0.20, 0.70, 0.45, 0.35]
+  },
+  {
+    "plate_number": "UP16KL2345",
+    "vehicle_type": "motorbike",
+    "color": "Red",
+    "is_blacklisted": false,
+    "blacklist_reason": null,
+    "dna_embedding": [0.90, 0.15, 0.10, 0.12, 0.84, 0.29, 0.44, 0.67]
+  },
+  {
+    "plate_number": "DL08MN6789",
+    "vehicle_type": "ambulance",
+    "color": "White",
+    "is_blacklisted": false,
+    "blacklist_reason": null,
+    "dna_embedding": [0.95, 0.92, 0.90, 0.10, 0.15, 0.20, 0.30, 0.80]
+  }
+]

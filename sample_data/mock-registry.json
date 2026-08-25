@@ -1,0 +1,66 @@
+[
+  {
+    "plate_number": "DL01AB1234",
+    "registered_type": "car",
+    "registered_color": "White",
+    "owner_name": "Rajesh Sharma",
+    "registration_date": "2022-04-15",
+    "status": "active"
+  },
+  {
+    "plate_number": "MH02CD5678",
+    "registered_type": "suv",
+    "registered_color": "Black",
+    "owner_name": "Anil Verma",
+    "registration_date": "2023-01-10",
+    "status": "reported_stolen"
+  },
+  {
+    "plate_number": "KA03EF9012",
+    "registered_type": "truck",
+    "registered_color": "Yellow",
+    "owner_name": "Karnataka Logistics Corp",
+    "registration_date": "2020-08-22",
+    "status": "active"
+  },
+  {
+    "plate_number": "MP04GH3456",
+    "registered_type": "car",
+    "registered_color": "Silver",
+    "owner_name": "Pooja Patel",
+    "registration_date": "2021-11-05",
+    "status": "active"
+  },
+  {
+    "plate_number": "HR26IJ7890",
+    "registered_type": "bus",
+    "registered_color": "Blue",
+    "owner_name": "Delhi City Transport",
+    "registration_date": "2019-06-30",
+    "status": "active"
+  },
+  {
+    "plate_number": "UP16KL2345",
+    "registered_type": "motorbike",
+    "registered_color": "Red",
+    "owner_name": "Vikram Singh",
+    "registration_date": "2024-02-14",
+    "status": "active"
+  },
+  {
+    "plate_number": "DL08MN6789",
+    "registered_type": "ambulance",
+    "registered_color": "White",
+    "owner_name": "AIIMS Emergency Fleet",
+    "registration_date": "2023-09-01",
+    "status": "active"
+  },
+  {
+    "plate_number": "DL03XY9999",
+    "registered_type": "motorbike",
+    "registered_color": "Black",
+    "owner_name": "Fraud Detection Test Subject",
+    "registration_date": "2021-03-12",
+    "status": "active"
+  }
+]

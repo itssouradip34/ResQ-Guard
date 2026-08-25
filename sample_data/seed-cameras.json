@@ -1,0 +1,74 @@
+[
+  {
+    "id": "cam-01",
+    "name": "Connaught Place Radial-1",
+    "video_path": "sample_data/videos/cam_01_connaught.mp4",
+    "rtsp_url": "rtsp://127.0.0.1:8554/cam01",
+    "latitude": 28.6315,
+    "longitude": 77.2167,
+    "zone": "Central Zone",
+    "road_segment": "CP Outer Circle North",
+    "status": "online",
+    "fps": 25.0
+  },
+  {
+    "id": "cam-02",
+    "name": "India Gate North Roundabout",
+    "video_path": "sample_data/videos/cam_02_indiagate.mp4",
+    "rtsp_url": "rtsp://127.0.0.1:8554/cam02",
+    "latitude": 28.6129,
+    "longitude": 77.2295,
+    "zone": "Central Zone",
+    "road_segment": "Rajpath Central Corridor",
+    "status": "online",
+    "fps": 24.5
+  },
+  {
+    "id": "cam-03",
+    "name": "Ring Road South Ext Flyover",
+    "video_path": "sample_data/videos/cam_03_ringroad.mp4",
+    "rtsp_url": "rtsp://127.0.0.1:8554/cam03",
+    "latitude": 28.5700,
+    "longitude": 77.2200,
+    "zone": "South Zone",
+    "road_segment": "Mahatma Gandhi Ring Road",
+    "status": "online",
+    "fps": 30.0
+  },
+  {
+    "id": "cam-04",
+    "name": "AIIMS Emergency Corridor Junction",
+    "video_path": "sample_data/videos/cam_04_aiims.mp4",
+    "rtsp_url": "rtsp://127.0.0.1:8554/cam04",
+    "latitude": 28.5672,
+    "longitude": 77.2100,
+    "zone": "South Zone",
+    "road_segment": "Aurobindo Marg Medical Corridor",
+    "status": "online",
+    "fps": 28.0
+  },
+  {
+    "id": "cam-05",
+    "name": "Cyber Hub Express Tollway",
+    "video_path": "sample_data/videos/cam_05_cyberhub.mp4",
+    "rtsp_url": "rtsp://127.0.0.1:8554/cam05",
+    "latitude": 28.4986,
+    "longitude": 77.0898,
+    "zone": "West Zone",
+    "road_segment": "NH-48 Express Highway",
+    "status": "online",
+    "fps": 29.5
+  },
+  {
+    "id": "cam-06",
+    "name": "IGI Airport Terminal 3 Approach",
+    "video_path": "sample_data/videos/cam_06_airport.mp4",
+    "rtsp_url": "rtsp://127.0.0.1:8554/cam06",
+    "latitude": 28.5562,
+    "longitude": 77.1000,
+    "zone": "Airport Zone",
+    "road_segment": "Aerocity Expressway",
+    "status": "online",
+    "fps": 25.0
+  }
+]

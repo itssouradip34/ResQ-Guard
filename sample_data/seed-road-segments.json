@@ -1,0 +1,74 @@
+[
+  {
+    "id": "seg-01",
+    "name": "CP Outer Circle North",
+    "zone": "Central Zone",
+    "start_lat": 28.6315,
+    "start_lng": 77.2150,
+    "end_lat": 28.6325,
+    "end_lng": 77.2185,
+    "speed_limit_kmh": 50.0,
+    "normal_direction_deg": 90.0,
+    "restricted_for": ["truck", "heavy_vehicle"]
+  },
+  {
+    "id": "seg-02",
+    "name": "Rajpath Central Corridor",
+    "zone": "Central Zone",
+    "start_lat": 28.6140,
+    "start_lng": 77.2270,
+    "end_lat": 28.6120,
+    "end_lng": 77.2315,
+    "speed_limit_kmh": 60.0,
+    "normal_direction_deg": 135.0,
+    "restricted_for": ["truck"]
+  },
+  {
+    "id": "seg-03",
+    "name": "Mahatma Gandhi Ring Road",
+    "zone": "South Zone",
+    "start_lat": 28.5720,
+    "start_lng": 77.2180,
+    "end_lat": 28.5680,
+    "end_lng": 77.2220,
+    "speed_limit_kmh": 70.0,
+    "normal_direction_deg": 140.0,
+    "restricted_for": []
+  },
+  {
+    "id": "seg-04",
+    "name": "Aurobindo Marg Medical Corridor",
+    "zone": "South Zone",
+    "start_lat": 28.5690,
+    "start_lng": 77.2080,
+    "end_lat": 28.5650,
+    "end_lng": 77.2120,
+    "speed_limit_kmh": 50.0,
+    "normal_direction_deg": 145.0,
+    "restricted_for": []
+  },
+  {
+    "id": "seg-05",
+    "name": "NH-48 Express Highway",
+    "zone": "West Zone",
+    "start_lat": 28.5020,
+    "start_lng": 77.0850,
+    "end_lat": 28.4950,
+    "end_lng": 77.0950,
+    "speed_limit_kmh": 80.0,
+    "normal_direction_deg": 125.0,
+    "restricted_for": []
+  },
+  {
+    "id": "seg-06",
+    "name": "Aerocity Expressway",
+    "zone": "Airport Zone",
+    "start_lat": 28.5600,
+    "start_lng": 77.0950,
+    "end_lat": 28.5520,
+    "end_lng": 77.1050,
+    "speed_limit_kmh": 65.0,
+    "normal_direction_deg": 130.0,
+    "restricted_for": []
+  }
+]
