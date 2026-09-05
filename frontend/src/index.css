@@ -58,7 +58,12 @@ body {
 }
 
 .glow-red {
-  box-shadow: 0 0 15px rgba(255, 23, 68, 0.45);
+  box-shadow: 0 0 15px rgba(244, 63, 94, 0.35);
+}
+
+/* Custom dark tactical tiles without any watermarks or API keys */
+.dark-tiles .leaflet-tile {
+  filter: brightness(0.6) invert(1) contrast(2.5) hue-rotate(190deg) saturate(0.3) brightness(0.85);
 }
 
 .glow-green {
