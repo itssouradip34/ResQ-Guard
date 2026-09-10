@@ -1,128 +1,61 @@
-# FCK Food Delivery Platform
+# ResQ-Guard
 
-A mobile-first ordering platform for FCK (Fueling Campus Knights), a small daily food-delivery business.
+**City-Wide AI Engine for Multi-Camera ANPR Trajectory Tracking and Urban Traffic Analytics**
 
-## What this project does
+Built for Smart India Hackathon 2026 — Team Codester
 
-The business currently publishes daily food menus through WhatsApp.
+---
 
-This application provides:
+## Overview
 
-- Daily menu publishing.
-- Food/product photos.
-- Variants and quantity-based pricing.
-- Availability/stock control.
-- Customer cart and checkout.
-- Online payments.
-- Order management.
-- Delivery information.
-- Admin dashboard.
-- WhatsApp-compatible notification/marketing workflow.
+ResQ-Guard turns a city's existing CCTV network into a single, connected vehicle-intelligence grid — not a collection of isolated plate-readers. Every camera feeds into one unified pipeline that detects vehicles, reads license plates, reconstructs a vehicle's full multi-camera journey across the city, and surfaces all of it on a live command-center dashboard for law enforcement and traffic planners.
 
-## Product philosophy
+The platform is designed as a **Smart City & Police Command Center Operations Solution**, combining automatic number plate recognition (ANPR), cross-camera trajectory reconstruction, real-time GIS visualization, and an emergency vehicle green-corridor dispatch system into a single deployable product.
 
-This is **not** intended to be a Swiggy/Zomato clone.
+## Features
 
-The application should optimize for:
+- **Multi-Camera ANPR** — YOLOv8-based vehicle and plate detection with ByteTrack tracking, fed into a dual-engine OCR (PaddleOCR + EasyOCR) with confidence fusion for high-accuracy plate reads.
+- **Cross-Camera Trajectory Reconstruction** — Stitches detections from multiple, non-overlapping cameras into one continuous vehicle journey across the city.
+- **Live GIS Command Map** — Real-time vehicle movement, camera health, and trajectory replay on an interactive city map, with CCTV stream popups and bounding-box overlays.
+- **ResQRoute — Emergency Green Corridor** — A 4-stage automated dispatch workflow (Dispatch → Signal Preemption → Green Wave Locked → Hospital Handover) that clears a live path for ambulances through traffic signal preemption.
+- **Traffic & Security Analytics** — City-wide congestion patterns, density heatmaps, and automated blacklist/suspicious-route alerts for law enforcement.
+- **Vehicle Intelligence Dossiers** — Per-vehicle case files with sighting history, trajectory replay, and officer case-note logging for investigations.
+- **AI City Assistant** — A conversational interface for querying traffic and camera data in natural language, with exportable reports.
+- **Mobile Patrol App** — A field-ready PWA for officers, with rapid plate scanning and one-tap dispatch actions.
+- **Camera Health Monitoring** — Live FPS/latency dashboards with automated failover detection across the camera network.
 
-- A small number of daily menu items.
-- Rapid menu changes.
-- Mobile administration.
-- Very simple customer checkout.
-- Reliable payment/order processing.
-- Low operational complexity.
+## Architecture
 
-## Repository structure
+ResQ-Guard runs on a single core event pipeline that every feature reads from or writes to, so new capabilities plug in without reworking existing ones:
 
-The exact structure is determined by the approved technical architecture. Keep responsibilities separated and avoid unnecessary abstractions.
-
-Suggested high-level organization:
-
-```text
-src/
-  app/
-  components/
-  features/
-  lib/
-  server/
-
-docs/
-  PRD.md
-  ARCHITECTURE.md
-  DEVELOPMENT.md
-  SECURITY.md
+```
+Camera / CCTV Feed
+      │
+      ▼
+CV Pipeline (YOLOv8 detect + track, dual-OCR plate read)
+      │
+      ▼
+Backend API (validate, enrich, persist events)
+      │
+      ▼
+Database & Cache (PostgreSQL + PostGIS, Redis pub/sub)
+      │
+      ▼
+Frontend Dashboard (live map + analytics via WebSocket)
 ```
 
-## Development rules
+**Per-camera CV workers** run as independent processes, so scaling to more cameras is a matter of spinning up more workers rather than rearchitecting the pipeline. The **backend** is a modular monolith (FastAPI) — each capability (vehicles, cameras, trajectories, alerts, analytics, ResQRoute) is its own router and service. **Real-time delivery** is handled via Redis pub/sub feeding WebSocket connections straight to the frontend map and dashboard.
 
-- Read `docs/PRD.md` before implementing product behavior.
-- Read `AGENTS.md` before making significant changes.
-- Do not hard-code menu items or prices.
-- Do not trust client-side totals or payment status.
-- Validate important inputs on the server.
-- Preserve historical order data.
-- Treat payment/webhook processing as idempotent.
-- Keep admin functionality server-authorized.
-- Keep the customer experience mobile-first.
-- Run tests, type checks, and linting after meaningful changes.
-- Use browser verification for customer/admin flows.
+### Tech stack
 
-## Local development
+| Layer | Technology |
+|---|---|
+| Computer Vision / AI | YOLOv8, ByteTrack, PaddleOCR, EasyOCR, OpenCV |
+| Backend | FastAPI (Python, async), WebSocket |
+| Database | PostgreSQL + PostGIS, Redis |
+| Frontend | React, Vite, TypeScript, TailwindCSS, MapLibre GL JS |
+| Routing / GIS | OSRM, OSMnx / NetworkX |
 
-The exact commands depend on the selected stack.
+---
 
-The canonical commands must be documented here once the project foundation is established.
-
-Expected categories:
-
-```bash
-# install dependencies
-# start development server
-# run unit/integration tests
-# run lint
-# run type checking
-# build production bundle
-```
-
-Do not invent commands that are not supported by the actual repository.
-
-## Environment variables
-
-Never commit secrets.
-
-A `.env.example` file should document required configuration without containing real credentials.
-
-Likely categories include:
-
-```text
-DATABASE_URL=
-AUTH_SECRET=
-PAYMENT_PROVIDER_KEY=
-PAYMENT_PROVIDER_SECRET=
-PAYMENT_WEBHOOK_SECRET=
-IMAGE_STORAGE_CONFIGURATION=
-WHATSAPP_CONFIGURATION=
-```
-
-The final variable names must match the actual implementation.
-
-## Deployment
-
-Deployment should use a managed hosting/database/storage setup appropriate for a small production application.
-
-The final deployment procedure must document:
-
-1. Database setup/migrations.
-2. Environment variables.
-3. Image storage.
-4. Payment configuration.
-5. Webhook URL configuration.
-6. Domain configuration.
-7. Production smoke tests.
-8. Backup/recovery expectations.
-
-## Status
-
-Current status: **Planning / architecture**
-
-Do not treat this README as proof that a feature is implemented. The implementation and verification status must reflect the actual repository.
+*Status: In development for SIH 2026.*
