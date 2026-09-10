@@ -12,6 +12,8 @@ class Incident(Base):
     incident_type = Column(String, nullable=False, index=True) # stopped_too_long, wrong_direction, sudden_deceleration
     confidence = Column(Float, default=0.90)
     severity = Column(String, default="medium")
+    status = Column(String, default="open", index=True)  # open, resolved
     details = Column(String, nullable=True)
     evidence_url = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    resolved_at = Column(DateTime, nullable=True)
