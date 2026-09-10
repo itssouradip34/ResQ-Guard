@@ -12,3 +12,10 @@ shapely>=2.0.3
 pillow>=10.2.0
 requests>=2.31.0
 pytest>=8.0.0
+
+# Added for real detection/OCR (were missing -- the mock pipeline never needed them)
+ultralytics>=8.3.0
+easyocr>=1.7.1
+torch>=2.2.0
+paddlepaddle>=2.6.0
+paddleocr>=2.7.0
