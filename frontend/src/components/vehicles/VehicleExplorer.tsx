@@ -25,6 +25,7 @@ export const VehicleExplorer: React.FC<VehicleExplorerProps> = ({ onViewTrajecto
   const [describeQuery, setDescribeQuery] = useState('white SUV near Central Zone this afternoon');
   const [searchCandidates, setSearchCandidates] = useState<SearchCandidate[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [plateFilter, setPlateFilter] = useState('');
 
   useEffect(() => {
     loadVehicles();
@@ -151,19 +152,50 @@ export const VehicleExplorer: React.FC<VehicleExplorerProps> = ({ onViewTrajecto
             </h4>
           </div>
 
-          <div className="space-y-2 max-h-[540px] overflow-y-auto pr-1">
-            {vehicles.map((v) => {
-              const isSelected = selectedVehicle?.id === v.id;
-              return (
-                <div
-                  key={v.id}
-                  onClick={() => handleSelectVehicle(v)}
-                  className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                    isSelected
-                      ? 'bg-cyan-500/15 border-cyan-400 shadow-[0_0_12px_rgba(0,229,255,0.2)]'
-                      : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
-                  }`}
+          {/* Quick Plate Search & Chips */}
+          <div className="space-y-2">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2" />
+              <input
+                type="text"
+                value={plateFilter}
+                onChange={(e) => setPlateFilter(e.target.value)}
+                placeholder="Filter by plate (e.g. DL01)..."
+                className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs font-mono text-cyan-300 placeholder-slate-500 focus:border-cyan-400 outline-none"
+              />
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {['DL01AB1234', 'MH02CD5678', 'HR26DQ5551', 'UP16CD8821'].map((chip) => (
+                <button
+                  key={chip}
+                  onClick={() => {
+                    setPlateFilter(chip);
+                    const match = vehicles.find((v) => v.plate_number.includes(chip));
+                    if (match) handleSelectVehicle(match);
+                  }}
+                  className="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-[10px] font-mono text-cyan-400 border border-slate-800 hover:border-cyan-500/40"
                 >
+                  {chip}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+            {vehicles
+              .filter((v) => !plateFilter || v.plate_number.toUpperCase().includes(plateFilter.toUpperCase()))
+              .map((v) => {
+                const isSelected = selectedVehicle?.id === v.id;
+                return (
+                  <div
+                    key={v.id}
+                    onClick={() => handleSelectVehicle(v)}
+                    className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                      isSelected
+                        ? 'bg-cyan-500/15 border-cyan-400 shadow-[0_0_12px_rgba(0,229,255,0.2)]'
+                        : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
+                    }`}
+                  >
                   <div className="flex items-center justify-between">
                     <span className="font-mono font-bold text-sm text-slate-100">{v.plate_number}</span>
                     {v.is_blacklisted && (

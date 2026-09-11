@@ -4,6 +4,7 @@ export interface Camera {
   id: string;
   name: string;
   video_path?: string;
+  video_url?: string;
   rtsp_url?: string;
   latitude: float;
   longitude: float;
@@ -102,7 +103,7 @@ export interface Trajectory {
 
 export interface Alert {
   id: string;
-  alert_type: 'blacklist_hit' | 'suspicious_route' | 'fake_plate_suspected';
+  alert_type: 'blacklist_hit' | 'suspicious_route' | 'fake_plate_suspected' | 'emergency_preemption' | 'sos_police_dispatch';
   vehicle_id?: string;
   plate_text?: string;
   camera_id?: string;
@@ -266,3 +267,78 @@ export interface PublicStats {
     status: string;
   }>;
 }
+
+export interface BenchmarkMetric {
+  category: string;
+  condition: string;
+  accuracy_percentage: number;
+  samples_evaluated: number;
+  char_error_rate: number;
+  avg_latency_ms: number;
+  target_met: boolean;
+}
+
+export interface OCRBenchmarkSummary {
+  target_accuracy_percentage: number;
+  overall_accuracy_percentage: number;
+  dual_engine_agreement_percentage: number;
+  character_error_rate: number;
+  avg_inference_latency_ms: number;
+  engine_comparison: Record<string, number>;
+  conditions: BenchmarkMetric[];
+}
+
+export interface OCRScenario {
+  id: string;
+  title: string;
+  condition: string;
+  plate: string;
+  vehicle: string;
+  paddle_text: string;
+  paddle_conf: number;
+  easy_text: string;
+  easy_conf: number;
+  fused_conf: number;
+  notes: string;
+}
+
+export interface OCRPipelineStep {
+  step_number: number;
+  name: string;
+  description: string;
+  status: string;
+  output: Record<string, any>;
+}
+
+export interface OCRSimulationResult {
+  scenario_id: string;
+  condition: string;
+  original_plate: string;
+  detected_plate: string;
+  is_correct: boolean;
+  paddle_ocr_score: number;
+  paddle_ocr_text: string;
+  easy_ocr_score: number;
+  easy_ocr_text: string;
+  fused_confidence: number;
+  char_agreement: number;
+  format_valid: boolean;
+  processing_time_ms: number;
+  exceeds_90_percent_target: boolean;
+  pipeline_steps: OCRPipelineStep[];
+}
+
+export type LaneSignalColor = 'green' | 'yellow' | 'red';
+
+export interface LaneStatus {
+  laneId: string;
+  name: string;
+  cameraId: string;
+  signal: LaneSignalColor;
+  vehicleCount: number;
+  densityPercentage: number;
+  levelOfService: 'LOS A' | 'LOS B' | 'LOS C' | 'LOS D' | 'LOS E' | 'LOS F';
+  emergencyPreempted: boolean;
+  greenCountdownSeconds: number;
+}
+

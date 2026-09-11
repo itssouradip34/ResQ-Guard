@@ -13,12 +13,15 @@ import { GovernanceView } from './components/governance/GovernanceView';
 import { AlertFeed } from './components/alerts/AlertFeed';
 import { ExplainableAIDrawer } from './components/alerts/ExplainableAIDrawer';
 import { MobilePatrolApp } from './components/mobile/MobilePatrolApp';
+import { LiveVideoMonitoring } from './components/live_video/LiveVideoMonitoring';
+import { OCRStudioView } from './components/ocr_studio/OCRStudioView';
+import { HowItWorksView } from './components/architecture/HowItWorksView';
 import { Camera, VehicleEvent, Alert, Trajectory, ResQRouteScenario } from './types';
 import { api } from './services/api';
 import { useWebSocket } from './hooks/useWebSocket';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>('map');
+  const [activeTab, setActiveTab] = useState<string>('live_video');
   const [isMobileMode, setIsMobileMode] = useState<boolean>(false);
 
   const [cameras, setCameras] = useState<Camera[]>([]);
@@ -99,6 +102,25 @@ export const App: React.FC = () => {
     }
   };
 
+  // Trajectory Selection by Plate string
+  const handleSelectVehicleForTrajectoryByPlate = async (plate: string) => {
+    try {
+      const vehs = await api.getVehicles();
+      const cleanTarget = plate.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+      const match = vehs.find((v) => v.plate_number.replace(/[^A-Z0-9]/gi, '').toUpperCase() === cleanTarget);
+      if (match) {
+        const traj = await api.getTrajectory(match.id);
+        setActiveTrajectory(traj);
+        setActiveTab('map');
+      } else {
+        setActiveTab('vehicles');
+      }
+    } catch (e) {
+      console.error(e);
+      setActiveTab('vehicles');
+    }
+  };
+
   const activeAlertsCount = alerts.filter((a) => !a.acknowledged).length;
 
   return (
@@ -150,6 +172,32 @@ export const App: React.FC = () => {
           />
         ) : (
           <>
+            {activeTab === 'live_video' && (
+              <LiveVideoMonitoring
+                cameras={cameras}
+                onTriggerAlert={(newAlert) => {
+                  const createdAlert: Alert = {
+                    id: `alert-${Date.now()}`,
+                    alert_type: newAlert.alert_type || 'emergency_preemption',
+                    plate_text: newAlert.plate_text || 'EMERGENCY',
+                    camera_id: newAlert.camera_id || 'cam-01',
+                    severity: (newAlert.severity as any) || 'critical',
+                    message: newAlert.message || 'Emergency Preemption Triggered',
+                    acknowledged: false,
+                    timestamp: new Date().toISOString()
+                  };
+                  setAlerts((prev) => [createdAlert, ...prev]);
+                  setLatestToastAlert(createdAlert);
+                  setTimeout(() => setLatestToastAlert(null), 6000);
+                }}
+                onSelectVehicleForTracking={handleSelectVehicleForTrajectoryByPlate}
+              />
+            )}
+
+            {activeTab === 'ocr_studio' && <OCRStudioView />}
+
+            {activeTab === 'how_it_works' && <HowItWorksView />}
+
             {activeTab === 'map' && (
               <LiveMap
                 cameras={cameras}

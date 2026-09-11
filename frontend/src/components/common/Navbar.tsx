@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Shield, Radio, AlertTriangle, Eye, EyeOff, Smartphone,
   Activity, Map, BarChart3, Video, Search, MessageSquare,
-  Ambulance, Cpu, FileText, Lock
+  Ambulance, Cpu, FileText, Lock, Code2, Zap
 } from 'lucide-react';
 import { useAuthRole } from '../../context/AuthRoleContext';
 import { StatusPill } from './StatusPill';
@@ -40,15 +40,15 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, []);
 
   const navTabs = [
+    { id: 'live_video', label: 'Live Lane Feeds', icon: Video, highlight: true, badge: 'LIVE' },
     { id: 'map', label: 'GIS Command Map', icon: Map },
-    { id: 'vehicles', label: 'Vehicle Intelligence', icon: Search },
-    { id: 'analytics', label: 'Traffic Analytics', icon: BarChart3 },
-    { id: 'cameras', label: 'Camera Health', icon: Video },
-    { id: 'incidents', label: 'AI Incidents', icon: Activity },
-    { id: 'assistant', label: 'City Assistant', icon: MessageSquare },
+    { id: 'ocr_studio', label: 'ANPR & OCR Studio', icon: Cpu, badge: '>90%' },
+    { id: 'vehicles', label: 'Trajectory Tracking', icon: Search },
+    { id: 'analytics', label: 'Macro Analytics', icon: BarChart3 },
     { id: 'resqroute', label: 'ResQRoute 2.0', icon: Ambulance, highlight: true },
-    { id: 'digital_twin', label: 'Digital Twin', icon: Cpu },
-    { id: 'citizen', label: 'Citizen Portal', icon: FileText },
+    { id: 'cameras', label: 'Camera Matrix', icon: Activity },
+    { id: 'how_it_works', label: 'How It Works', icon: Code2 },
+    { id: 'digital_twin', label: 'Digital Twin', icon: Zap },
     { id: 'governance', label: 'Governance & Audit', icon: Lock }
   ];
 
@@ -101,6 +101,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-cyan-400' : tab.highlight ? 'text-emerald-400' : 'text-slate-400'}`} />
                 <span>{tab.label}</span>
+                {tab.badge && (
+                  <span className="px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 text-[9px] font-mono font-bold border border-cyan-500/30">
+                    {tab.badge}
+                  </span>
+                )}
               </button>
             );
           })}

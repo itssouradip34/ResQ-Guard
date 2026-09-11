@@ -189,6 +189,103 @@ export const AnalyticsView: React.FC = () => {
           ))}
         </div>
       </GlassCard>
+
+      {/* Problem Statement Pillar 3: Origin-Destination (O-D) Movement Matrix & Bottlenecks */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Origin-Destination Movement Patterns */}
+        <GlassCard className="p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 className="text-sm font-bold font-mono text-slate-200 flex items-center gap-2">
+              <ArrowUpRight className="w-4 h-4 text-cyan-400" />
+              ORIGIN-DESTINATION (O-D) TRAFFIC MOVEMENT PATTERNS
+            </h3>
+            <span className="text-[10px] font-mono text-cyan-400">Aggregated Trajectories</span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left font-mono text-xs">
+              <thead>
+                <tr className="border-b border-slate-800 text-slate-400 bg-slate-900/40">
+                  <th className="py-2 px-3">Origin Zone</th>
+                  <th className="py-2 px-3">Destination Zone</th>
+                  <th className="py-2 px-3">Volume</th>
+                  <th className="py-2 px-3">Avg Transit</th>
+                  <th className="py-2 px-3">Flow %</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {[
+                  { orig: 'Central Zone (CP)', dest: 'South Zone (AIIMS)', vol: 1420, time: '18 min', pct: 32.4 },
+                  { orig: 'South Zone (Ring Rd)', dest: 'West Zone (Cyber Hub)', vol: 1180, time: '26 min', pct: 26.8 },
+                  { orig: 'Central Zone (India Gate)', dest: 'Airport Zone (T3)', vol: 940, time: '31 min', pct: 21.5 },
+                  { orig: 'West Zone (NH-48)', dest: 'Central Zone (CP)', vol: 850, time: '29 min', pct: 19.3 }
+                ].map((od, idx) => (
+                  <tr key={idx} className="hover:bg-slate-900/30 transition-colors">
+                    <td className="py-2.5 px-3 font-bold text-slate-200">{od.orig}</td>
+                    <td className="py-2.5 px-3 text-cyan-300">{od.dest}</td>
+                    <td className="py-2.5 px-3 text-slate-100">{od.vol.toLocaleString()} veh</td>
+                    <td className="py-2.5 px-3 text-emerald-400">{od.time}</td>
+                    <td className="py-2.5 px-3 font-bold text-cyan-400">{od.pct}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </GlassCard>
+
+        {/* Bottleneck Identification Table */}
+        <GlassCard className="p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 className="text-sm font-bold font-mono text-slate-200 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-400" />
+              IDENTIFIED CONGESTION BOTTLENECKS & LEVEL OF SERVICE (LOS)
+            </h3>
+            <span className="text-[10px] font-mono text-rose-400 font-bold">Real-Time Delays</span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left font-mono text-xs">
+              <thead>
+                <tr className="border-b border-slate-800 text-slate-400 bg-slate-900/40">
+                  <th className="py-2 px-3">Corridor Node</th>
+                  <th className="py-2 px-3">Queue Length</th>
+                  <th className="py-2 px-3">Delay Time</th>
+                  <th className="py-2 px-3">LOS Class</th>
+                  <th className="py-2 px-3">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {[
+                  { corridor: 'AIIMS Emergency Radial', queue: '680 m', delay: '+14.2 min', los: 'LOS E', status: 'severe' },
+                  { corridor: 'Ring Road South Ext Flyover', queue: '520 m', delay: '+10.8 min', los: 'LOS D', status: 'high' },
+                  { corridor: 'Cyber Hub Express Tollway', queue: '390 m', delay: '+7.4 min', los: 'LOS C', status: 'medium' },
+                  { corridor: 'Connaught Place Radial-1', queue: '180 m', delay: '+3.1 min', los: 'LOS B', status: 'low' }
+                ].map((bn, idx) => (
+                  <tr key={idx} className="hover:bg-slate-900/30 transition-colors">
+                    <td className="py-2.5 px-3 font-bold text-slate-200">{bn.corridor}</td>
+                    <td className="py-2.5 px-3 text-amber-300">{bn.queue}</td>
+                    <td className="py-2.5 px-3 font-extrabold text-rose-400">{bn.delay}</td>
+                    <td className="py-2.5 px-3">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                        bn.status === 'severe' ? 'bg-rose-950 text-rose-300 border-rose-500/50' :
+                        bn.status === 'high' ? 'bg-amber-950 text-amber-300 border-amber-500/50' :
+                        'bg-cyan-950 text-cyan-300 border-cyan-500/50'
+                      }`}>
+                        {bn.los}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <span className="text-cyan-400 font-bold hover:underline cursor-pointer">
+                        Extend Green Split
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </GlassCard>
+      </div>
     </div>
   );
 };

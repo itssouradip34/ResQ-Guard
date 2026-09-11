@@ -199,5 +199,28 @@ export const api = {
     const res = await fetch(`${API_BASE}/governance/audit-logs`, { headers: getHeaders(role) });
     if (!res.ok) throw new Error('Failed to fetch audit logs');
     return res.json();
+  },
+
+  // OCR Studio & Adverse Condition Benchmarks
+  async getOCRBenchmarks(role?: UserRole): Promise<any> {
+    const res = await fetch(`${API_BASE}/ocr-studio/benchmarks`, { headers: getHeaders(role) });
+    if (!res.ok) throw new Error('Failed to fetch OCR benchmarks');
+    return res.json();
+  },
+
+  async getOCRScenarios(role?: UserRole): Promise<any[]> {
+    const res = await fetch(`${API_BASE}/ocr-studio/scenarios`, { headers: getHeaders(role) });
+    if (!res.ok) throw new Error('Failed to fetch OCR scenarios');
+    return res.json();
+  },
+
+  async simulateOCR(scenarioId: string, customPlateText?: string, role?: UserRole): Promise<any> {
+    const res = await fetch(`${API_BASE}/ocr-studio/simulate`, {
+      method: 'POST',
+      headers: getHeaders(role),
+      body: JSON.stringify({ scenario_id: scenarioId, custom_plate_text: customPlateText })
+    });
+    if (!res.ok) throw new Error('Failed to simulate OCR');
+    return res.json();
   }
 };

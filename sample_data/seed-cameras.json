@@ -2,7 +2,7 @@
   {
     "id": "cam-01",
     "name": "Connaught Place Radial-1",
-    "video_path": "sample_data/videos/cam_01_connaught.mp4",
+    "video_path": "../sample_data/videos/cam_01_connaught.mp4",
     "rtsp_url": null,
     "latitude": 28.6315,
     "longitude": 77.2167,
@@ -14,7 +14,7 @@
   {
     "id": "cam-02",
     "name": "India Gate North Roundabout",
-    "video_path": "sample_data/videos/cam_02_indiagate.mp4",
+    "video_path": "../sample_data/videos/cam_02_indiagate.mp4",
     "rtsp_url": null,
     "latitude": 28.6129,
     "longitude": 77.2295,
@@ -26,7 +26,7 @@
   {
     "id": "cam-03",
     "name": "Ring Road South Ext Flyover",
-    "video_path": "sample_data/videos/cam_03_ringroad.mp4",
+    "video_path": "../sample_data/videos/cam_03_ringroad.mp4",
     "rtsp_url": null,
     "latitude": 28.57,
     "longitude": 77.22,
@@ -38,7 +38,7 @@
   {
     "id": "cam-04",
     "name": "AIIMS Emergency Corridor Junction",
-    "video_path": "sample_data/videos/cam_04_aiims.mp4",
+    "video_path": "../sample_data/videos/cam_04_aiims.mp4",
     "rtsp_url": null,
     "latitude": 28.5672,
     "longitude": 77.21,
@@ -50,7 +50,7 @@
   {
     "id": "cam-05",
     "name": "Cyber Hub Express Tollway",
-    "video_path": "sample_data/videos/cam_05_cyberhub.mp4",
+    "video_path": "../sample_data/videos/cam_05_cyberhub.mp4",
     "rtsp_url": null,
     "latitude": 28.4986,
     "longitude": 77.0898,
@@ -62,7 +62,7 @@
   {
     "id": "cam-06",
     "name": "IGI Airport Terminal 3 Approach",
-    "video_path": "sample_data/videos/cam_06_airport.mp4",
+    "video_path": "../sample_data/videos/cam_06_airport.mp4",
     "rtsp_url": null,
     "latitude": 28.5562,
     "longitude": 77.1,
