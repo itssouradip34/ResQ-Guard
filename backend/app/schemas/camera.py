@@ -11,6 +11,7 @@ class CameraBase(BaseModel):
     longitude: float
     zone: str = "Central Zone"
     road_segment: Optional[str] = None
+    video_url: Optional[str] = None
     status: str = "online"
     fps: float = 25.0
 

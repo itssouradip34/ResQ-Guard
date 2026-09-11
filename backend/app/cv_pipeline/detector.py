@@ -33,7 +33,10 @@ from ultralytics import YOLO
 
 # --- Config -----------------------------------------------------------
 # Path to your fine-tuned plate detector (best.pt from plate_yolo26/train-3)
-PLATE_MODEL_PATH = os.getenv("PLATE_MODEL_PATH", "models/best.pt")
+DEFAULT_PLATE_MODEL = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "models", "best.pt")
+if not os.path.exists(DEFAULT_PLATE_MODEL):
+    DEFAULT_PLATE_MODEL = "models/best.pt"
+PLATE_MODEL_PATH = os.getenv("PLATE_MODEL_PATH", DEFAULT_PLATE_MODEL)
 
 # Optional: path to a vehicle-class detector (e.g. stock yolo26n.pt, which
 # ships pretrained on COCO and already knows car/truck/bus/motorcycle).

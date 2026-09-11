@@ -17,3 +17,10 @@ class Camera(Base):
     fps = Column(Float, default=25.0)
     last_heartbeat = Column(DateTime, default=datetime.utcnow)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    @property
+    def video_url(self):
+        if self.video_path:
+            import os
+            return f"/static/videos/{os.path.basename(self.video_path)}"
+        return None

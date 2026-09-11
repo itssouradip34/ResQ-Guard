@@ -29,6 +29,7 @@ from .api.v1.resqroute import router as resqroute_router
 from .api.v1.digital_twin import router as digital_twin_router
 from .api.v1.citizen import router as citizen_router
 from .api.v1.governance import router as governance_router
+from .api.v1.ocr_studio import router as ocr_studio_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -67,6 +68,11 @@ snapshots_dir = os.path.join(os.path.dirname(__file__), "..", "sample_data", "sn
 os.makedirs(snapshots_dir, exist_ok=True)
 app.mount("/static/snapshots", StaticFiles(directory=snapshots_dir), name="snapshots")
 
+# Static files for multi-camera video surveillance feeds
+videos_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "sample_data", "videos"))
+os.makedirs(videos_dir, exist_ok=True)
+app.mount("/static/videos", StaticFiles(directory=videos_dir), name="videos")
+
 # Include Routers under /api/v1
 api_v1_prefix = settings.API_V1_STR
 app.include_router(cameras_router, prefix=api_v1_prefix)
@@ -84,6 +90,7 @@ app.include_router(resqroute_router, prefix=api_v1_prefix)
 app.include_router(digital_twin_router, prefix=api_v1_prefix)
 app.include_router(governance_router, prefix=api_v1_prefix)
 app.include_router(citizen_router, prefix=api_v1_prefix) # includes /report and /public/stats
+app.include_router(ocr_studio_router, prefix=api_v1_prefix)
 
 # WebSockets
 @app.websocket("/ws/live-feed")

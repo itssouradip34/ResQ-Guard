@@ -39,17 +39,20 @@ EASYOCR_GPU = os.getenv("EASYOCR_GPU", "true").lower() == "true"
 class PlateOCREngine:
     def __init__(self):
         # lang_list=['en'] is right for Indian plates (Latin alphanumeric).
-        # If EASYOCR_MODEL_STORAGE_DIR/EASYOCR_RECOG_NETWORK don't point at a
-        # valid fine-tuned checkpoint, this silently falls back to EasyOCR's
-        # stock English recognizer -- check reader.recognizer at startup if
-        # results look off.
-        self.reader = easyocr.Reader(
-            ["en"],
-            gpu=EASYOCR_GPU,
-            model_storage_directory=EASYOCR_MODEL_STORAGE_DIR,
-            user_network_directory=EASYOCR_USER_NETWORK_DIR,
-            recog_network=EASYOCR_RECOG_NETWORK,
-        )
+        # Check if custom model directories actually exist; otherwise fall back to standard stock English recognizer
+        try:
+            if os.path.isdir(EASYOCR_MODEL_STORAGE_DIR) and os.path.isdir(EASYOCR_USER_NETWORK_DIR):
+                self.reader = easyocr.Reader(
+                    ["en"],
+                    gpu=EASYOCR_GPU,
+                    model_storage_directory=EASYOCR_MODEL_STORAGE_DIR,
+                    user_network_directory=EASYOCR_USER_NETWORK_DIR,
+                    recog_network=EASYOCR_RECOG_NETWORK,
+                )
+            else:
+                self.reader = easyocr.Reader(["en"], gpu=EASYOCR_GPU)
+        except Exception:
+            self.reader = easyocr.Reader(["en"], gpu=False)
 
     def read_plate(self, plate_crop: np.ndarray) -> Tuple[str, float]:
         """
