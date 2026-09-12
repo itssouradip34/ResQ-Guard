@@ -1,0 +1,378 @@
+.gate {
+  --bg: #050b14;
+  --panel: #0b1626;
+  --line: #1c2534;
+  --text: #e7ecf2;
+  --text-muted: #8ea0b5;
+  --cyan: #22d3ee;
+  --amber: #ffb238;
+
+  position: relative;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  background: #000; /* letterbox color behind the video if aspect ratios don't match */
+  color: var(--text);
+  font-family: "Space Grotesk", sans-serif;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* ---------- Background video: fully visible, never cropped ---------- */
+.gate__video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;   /* shows the ENTIRE video frame, letterboxed if needed */
+  object-position: center;
+  z-index: 0;
+}
+
+/* ---------- Faint animated grid overlay (decorative, kept very light) ---------- */
+.gate__grid {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  pointer-events: none;
+  opacity: 0.12;
+}
+
+.gate__cell {
+  border: 1px solid rgba(34, 211, 238, 0.06);
+}
+
+/* ---------- Top-right corner cluster (content + GitHub icon) ---------- */
+.gate__topright {
+  position: absolute;
+  top: 20px;
+  right: 26px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.gate__github {
+  color: var(--text-muted);
+  transition: color 0.2s ease, transform 0.2s ease;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.6));
+}
+
+.gate__github:hover {
+  color: var(--cyan);
+  transform: translateY(-1px);
+}
+
+/* ---------- Compact content block (tagline + buttons) in the corner ---------- */
+.gate__content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.gate__content--enter {
+  animation: gate-content-in 0.6s ease-out both;
+}
+
+@keyframes gate-content-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.gate__tagline--compact {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--text);
+  max-width: 240px;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8), 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+.gate__actions--compact {
+  display: flex;
+  gap: 10px;
+}
+
+.gate__actions--compact .gate__btn {
+  font-size: 0.78rem;
+  padding: 7px 16px;
+}
+
+/* ---------- Main hero area (now only holds the intro wordmark) ---------- */
+.gate__main {
+  position: relative;
+  z-index: 3;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+}
+
+/* ---------- Wordmark frame (intro only) ---------- */
+.gate__frame {
+  position: relative;
+  padding: 40px 56px;
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  border-radius: 4px;
+  background: rgba(5, 11, 20, 0.45);
+  backdrop-filter: blur(3px);
+}
+
+.gate__frame--enter {
+  animation: gate-frame-in 0.6s ease-out both;
+}
+
+.gate__frame--exit {
+  animation: gate-frame-out 0.7s ease-in both;
+}
+
+@keyframes gate-frame-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes gate-frame-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0px);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.06);
+    filter: blur(6px);
+  }
+}
+
+.gate__corner {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--cyan);
+}
+
+.gate__corner--tl { top: -2px; left: -2px; border-right: none; border-bottom: none; }
+.gate__corner--tr { top: -2px; right: -2px; border-left: none; border-bottom: none; }
+.gate__corner--bl { bottom: -2px; left: -2px; border-right: none; border-top: none; }
+.gate__corner--br { bottom: -2px; right: -2px; border-left: none; border-top: none; }
+
+.gate__wordmark {
+  margin: 0;
+  font-size: clamp(2.2rem, 6vw, 4rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  text-shadow: 0 0 30px rgba(34, 211, 238, 0.35), 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+/* ---------- Shared button styles ---------- */
+.gate__btn {
+  font-family: inherit;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.gate__btn--solid {
+  background: var(--cyan);
+  color: #04141c;
+  border: 1px solid var(--cyan);
+}
+
+.gate__btn--solid:hover {
+  background: #52e3fa;
+  box-shadow: 0 0 24px rgba(34, 211, 238, 0.4);
+}
+
+.gate__btn--outline {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid rgba(231, 236, 242, 0.4);
+}
+
+.gate__btn--outline:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+/* ---------- Brand badge covering the video's baked-in watermark ---------- */
+/* Pushed much further left (right offset nearly doubled) and enlarged
+   substantially so it fully overlaps and hides the wide Powtoon badge. */
+.gate__brandbadge {
+  position: absolute;
+  z-index: 5;
+  right: 136px;
+  bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 22px 40px;
+  background: rgba(6, 12, 22, 0.97);
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  border-radius: 999px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+}
+
+.gate__brandbadge svg {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+}
+
+.gate__brandbadge-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.gate__brandbadge-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.gate__brandbadge-name {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--text);
+}
+
+/* ---------- Bottom status ticker ---------- */
+.gate__ticker {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(5, 11, 20, 0.55);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.gate__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #34e37a;
+  box-shadow: 0 0 8px rgba(52, 227, 122, 0.8);
+  flex-shrink: 0;
+}
+
+.gate__ticker-label {
+  color: #34e37a;
+  font-weight: 600;
+}
+
+.gate__ticker-sep {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.gate__ticker-item {
+  color: var(--text-muted);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .gate__brandbadge {
+    right: 150px;
+    padding: 16px 28px;
+    gap: 14px;
+  }
+
+  .gate__brandbadge svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .gate__brandbadge-name {
+    font-size: 1.1rem;
+  }
+
+  .gate__brandbadge-label {
+    font-size: 0.65rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .gate__topright {
+    top: 14px;
+    right: 14px;
+    left: 14px;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+  }
+
+  .gate__tagline--compact {
+    max-width: 180px;
+    font-size: 0.7rem;
+  }
+
+  .gate__actions--compact .gate__btn {
+    font-size: 0.7rem;
+    padding: 6px 12px;
+  }
+
+  .gate__brandbadge {
+    right: 8px;
+    left: 8px;
+    bottom: 46px;
+    padding: 10px 18px;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  .gate__brandbadge svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .gate__brandbadge-name {
+    font-size: 0.85rem;
+  }
+
+  .gate__brandbadge-label {
+    font-size: 0.55rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .gate__frame {
+    padding: 28px 32px;
+  }
+}

@@ -1,0 +1,127 @@
+.team {
+  --bg: #0b0e13;
+  --panel: #12161d;
+  --line: #232a35;
+  --text: #e7ecf2;
+  --text-muted: #7c8797;
+  --amber: #ffb238;
+  --cyan: #22d3ee;
+
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Space Grotesk", sans-serif;
+  padding: 48px 24px 64px;
+}
+
+.team__header {
+  max-width: 720px;
+  margin: 0 auto 48px;
+  text-align: center;
+  position: relative;
+}
+
+.team__back {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+.team__back:hover { color: var(--text); }
+
+.team__eyebrow {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  color: var(--amber);
+  margin: 0 0 10px;
+}
+
+.team__title {
+  margin: 0;
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  font-weight: 700;
+}
+
+.team__grid {
+  max-width: 920px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.team__card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 28px 20px;
+  text-align: center;
+}
+
+.team__photo {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--amber);
+  display: block;
+}
+
+.team__photo--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--line);
+  color: var(--amber);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.team__name {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.team__role {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.team__blurb {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 14px 0 18px;   /* space above (after role) and below (before links) */
+  line-height: 1.4;
+}
+
+.team__links {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;              /* space between GitHub and LinkedIn */
+  font-size: 0.8rem;
+}
+
+.team__links a {
+  color: var(--cyan);
+  text-decoration: none;
+}
+
+.team__links a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .team__back { position: static; display: inline-block; margin-bottom: 12px; }
+}
