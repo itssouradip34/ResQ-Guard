@@ -117,29 +117,70 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
     }
   ]);
 
-  // Dynamic Signal Cycle Timer (Adaptive Webster Traffic Logic)
+  const [webcamActive, setWebcamActive] = useState<boolean>(false);
+  const [showOverlays, setShowOverlays] = useState<boolean>(true);
+  const webcamVideoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Dynamic animated bounding box tracking loop
   useEffect(() => {
-    if (!isPlaying || emergencyActive) return;
+    if (!isPlaying) return;
+    const interval = setInterval(() => {
+      setLanes((prevLanes) =>
+        prevLanes.map((lane) => ({
+          ...lane,
+          detections: lane.detections.map((det) => {
+            const deltaY = (det.speed / 50.0) * 0.8;
+            let newTop = det.box.top + deltaY;
+            if (newTop > 80) newTop = 20; // Loop vehicles around frame
+            const deltaX = Math.sin(newTop * 0.1) * 0.3;
+            return {
+              ...det,
+              box: {
+                ...det.box,
+                top: newTop,
+                left: Math.max(10, Math.min(75, det.box.left + deltaX))
+              }
+            };
+          })
+        }))
+      );
+    }, 100);
 
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          // Switch to next lane in round-robin cycle
-          setActiveGreenLane((currLane) => {
-            const nextLane = (currLane + 1) % lanes.length;
-            // Adaptive Green Split based on lane vehicle density
-            const nextGreenSeconds = Math.max(12, Math.round((lanes[nextLane].density / 100) * 25));
-            setCountdown(nextGreenSeconds);
-            return nextLane;
-          });
-          return 15;
+    return () => clearInterval(interval);
+  }, [isPlaying]);
+
+  // Handle Live Webcam Toggle
+  const toggleWebcam = async () => {
+    if (webcamActive) {
+      if (webcamVideoRef.current && webcamVideoRef.current.srcObject) {
+        const stream = webcamVideoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach((track) => track.stop());
+        webcamVideoRef.current.srcObject = null;
+      }
+      setWebcamActive(false);
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        if (webcamVideoRef.current) {
+          webcamVideoRef.current.srcObject = stream;
+          webcamVideoRef.current.play();
         }
-        return prev - 1;
-      });
-    }, 1000);
+        setWebcamActive(true);
+      } catch (err) {
+        alert("Webcam permission denied or camera unavailable.");
+      }
+    }
+  };
 
-    return () => clearInterval(timer);
-  }, [isPlaying, emergencyActive, lanes]);
+  // Handle Custom Video File Upload
+  const handleCustomVideoUpload = (e: React.ChangeEvent<HTMLInputElement>, laneId: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setLanes((prev) =>
+      prev.map((l) => (l.id === laneId ? { ...l, videoSrc: url } : l))
+    );
+  };
 
   // Update signals whenever activeGreenLane changes (Ensuring Lanezy Core Rule: Only 1 green signal at a time)
   useEffect(() => {
@@ -275,6 +316,32 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
               </button>
             ))}
           </div>
+
+          {/* Webcam Toggle */}
+          <button
+            onClick={toggleWebcam}
+            className={`px-3 py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all border ${
+              webcamActive
+                ? 'bg-rose-500/20 text-rose-300 border-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.4)] animate-pulse'
+                : 'bg-slate-900 text-slate-300 border-slate-700 hover:text-white'
+            }`}
+          >
+            <Eye className="w-4 h-4 text-cyan-400" />
+            <span>{webcamActive ? 'STOP WEBCAM' : 'USE LIVE WEBCAM'}</span>
+          </button>
+
+          {/* Toggle Bounding Box Overlays */}
+          <button
+            onClick={() => setShowOverlays(!showOverlays)}
+            className={`px-3 py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all border ${
+              showOverlays
+                ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
+                : 'bg-slate-900 text-slate-400 border-slate-700'
+            }`}
+          >
+            <Sparkles className="w-4 h-4 text-emerald-400" />
+            <span>{showOverlays ? 'AI BOXES: ON' : 'AI BOXES: OFF'}</span>
+          </button>
 
           {/* Audio toggle */}
           <button
@@ -462,30 +529,49 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
 
               {/* Video Player Container with AI Bounding Box Overlays */}
               <div className="relative rounded-xl overflow-hidden bg-black border border-slate-800 aspect-video flex items-center justify-center group">
-                <video
-                  ref={(el) => {
-                    videoRefs.current[lane.id] = el;
-                  }}
-                  src={lane.videoSrc}
-                  autoPlay
-                  loop
-                  muted={isMuted}
-                  playsInline
-                  className="w-full h-full object-cover"
-                />
+                {webcamActive && lane.id === 'lane-1' ? (
+                  <video
+                    ref={webcamVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <video
+                    ref={(el) => {
+                      videoRefs.current[lane.id] = el;
+                    }}
+                    src={lane.videoSrc}
+                    autoPlay
+                    loop
+                    muted={isMuted}
+                    playsInline
+                    className="w-full h-full object-cover"
+                  />
+                )}
 
                 {/* Live Tactical HUD Overlay */}
                 <div className="absolute top-2 left-2 z-20 flex items-center gap-2">
                   <span className="px-2 py-0.5 rounded bg-black/80 border border-cyan-500/40 text-[10px] font-mono text-cyan-300 flex items-center gap-1.5 backdrop-blur-md">
                     <Radio className="w-3 h-3 text-cyan-400 animate-pulse" />
-                    LIVE 1080p
+                    {webcamActive && lane.id === 'lane-1' ? 'WEBCAM 1080p' : 'LIVE 1080p'}
                   </span>
                   <span className="px-2 py-0.5 rounded bg-black/80 border border-slate-700 text-[10px] font-mono text-emerald-400 font-bold backdrop-blur-md">
                     25.0 FPS
                   </span>
                 </div>
 
-                <div className="absolute top-2 right-2 z-20">
+                <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5">
+                  <label className="cursor-pointer px-2 py-0.5 rounded bg-black/80 border border-slate-700 hover:border-cyan-500 text-[9px] font-mono text-slate-300 hover:text-cyan-300 backdrop-blur-md transition-all">
+                    <input
+                      type="file"
+                      accept="video/*"
+                      className="hidden"
+                      onChange={(e) => handleCustomVideoUpload(e, lane.id)}
+                    />
+                    📂 UPLOAD VIDEO
+                  </label>
                   <span
                     className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border backdrop-blur-md ${
                       isGreen
@@ -493,12 +579,12 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
                         : 'bg-rose-950/90 text-rose-300 border-rose-500/50'
                     }`}
                   >
-                    {isGreen ? 'SIGNAL: PROCEED (GREEN)' : 'SIGNAL: STOP (RED)'}
+                    {isGreen ? 'PROCEED (GREEN)' : 'STOP (RED)'}
                   </span>
                 </div>
 
                 {/* Real-Time Bounding Boxes and Floating Plate Tags */}
-                {lane.detections.map((det) => (
+                {showOverlays && lane.detections.map((det) => (
                   <div
                     key={det.id}
                     style={{
