@@ -32,21 +32,52 @@ async def simulate_crime_incident(
     Simulates a human violence scenario (assault/knife draw/struggle/brawl),
     runs pose kinematic graph evaluation, and triggers Police SOS dispatch.
     """
-    # Generate synthetic 17-keypoint sequence (30 frames, 17 keypoints, 2 coords)
-    t = np.linspace(0, 1, 30)
-    fake_seq = np.zeros((30, 17, 2), dtype=np.float32)
-    
-    # Simulate high angular swing in wrists and elbows
-    if payload.action_type == "PHYSICAL_ASSAULT_SLAP":
-        fake_seq[:, 9, 0] = np.sin(t * 8.0) * 12.0 # right wrist high velocity swing
-        fake_seq[:, 7, 0] = np.sin(t * 8.0) * 8.0  # right elbow
-    elif payload.action_type == "WEAPON_KNIFE_DRAW":
-        fake_seq[:10, 9, 1] = 0.5 # waistline
-        fake_seq[10:, 9, 1] = 1.8 # rapid forward thrust
-    elif payload.action_type == "MOLESTATION_STRUGGLE":
-        fake_seq[:, :, 0] = np.random.normal(0, 0.2, (30, 17)) # close proximity compression
-    elif payload.action_type == "GROUP_BRAWL_FIGHT":
-        fake_seq = np.random.normal(0, 1.5, (30, 17, 2)).astype(np.float32)
+    # Generate 17-keypoint sequence (T=16 frames, 17 keypoints, 3 coords [x, y, conf]) matching trained neural model
+    T = 16
+    N = 17
+    base_joints = np.array([
+        [0.50, 0.12], [0.48, 0.10], [0.52, 0.10], [0.45, 0.12], [0.55, 0.12],
+        [0.40, 0.28], [0.60, 0.28], [0.35, 0.44], [0.65, 0.44], [0.30, 0.58],
+        [0.70, 0.58], [0.43, 0.58], [0.57, 0.58], [0.42, 0.78], [0.58, 0.78],
+        [0.42, 0.96], [0.58, 0.96]
+    ], dtype=np.float32)
+
+    fake_seq = np.zeros((T, N, 3), dtype=np.float32)
+    import math
+    for t_step in range(T):
+        frame_skel = base_joints.copy()
+        phase = t_step / float(T)
+
+        if payload.action_type == "NORMAL_WALKING_STANDING":
+            gait = math.sin(phase * 2 * math.pi) * 0.05
+            frame_skel[15, 0] += gait
+            frame_skel[16, 0] -= gait
+            frame_skel[9, 0] -= gait * 0.6
+            frame_skel[10, 0] += gait * 0.6
+        elif payload.action_type == "PHYSICAL_ASSAULT_SLAP":
+            if t_step < 8:
+                frame_skel[10, 0] += (t_step / 8.0) * 0.28
+                frame_skel[8, 1] -= (t_step / 8.0) * 0.18
+            else:
+                strike = (t_step - 8) / 8.0
+                frame_skel[10, 0] -= strike * 0.50
+                frame_skel[10, 1] -= strike * 0.28
+                frame_skel[0, 0] += strike * 0.10
+        elif payload.action_type == "WEAPON_KNIFE_DRAW":
+            if t_step < 7:
+                frame_skel[10, :] = [0.58, 0.60]
+            else:
+                thrust = (t_step - 7) / 9.0
+                frame_skel[10, 0] += thrust * 0.40
+                frame_skel[10, 1] -= thrust * 0.12
+        elif payload.action_type == "MOLESTATION_STRUGGLE":
+            frame_skel += np.random.normal(0, 0.04, frame_skel.shape)
+            frame_skel[9:11, 1] -= math.sin(phase * 4 * math.pi) * 0.10
+        elif payload.action_type == "GROUP_BRAWL_FIGHT":
+            frame_skel += np.random.normal(0, 0.09, frame_skel.shape)
+
+        fake_seq[t_step, :, :2] = frame_skel
+        fake_seq[t_step, :, 2] = 0.95
 
     event = await CrimeDetectionService.evaluate_camera_human_movements(
         db=db,

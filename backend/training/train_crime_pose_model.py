@@ -5,6 +5,9 @@ Usage:
 """
 
 import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+
 import argparse
 import numpy as np
 import torch
@@ -97,7 +100,7 @@ def train_crime_pose_model(data_path: str, epochs: int = 25, batch_size: int = 1
             torch.save({"state_dict": model.state_dict(), "classes": CRIME_ACTION_CLASSES, "epoch": epoch}, output_path)
             print(f"  --> Saved Best Crime Pose Model Checkpoint: {output_path}")
 
-    print(f"[✓] Heiwa Pose Training Completed. Best weights exported to {output_path}")
+    print(f"[OK] Heiwa Pose Training Completed. Best weights exported to {output_path}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train Heiwa Human Pose Crime Classifier")

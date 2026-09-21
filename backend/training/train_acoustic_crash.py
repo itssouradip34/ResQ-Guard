@@ -5,6 +5,9 @@ Usage:
 """
 
 import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+
 import argparse
 import torch
 import torch.nn as nn
@@ -96,7 +99,7 @@ def train_acoustic_model(data_dir: str, epochs: int = 25, batch_size: int = 32, 
             torch.save({"state_dict": model.state_dict(), "classes": ACOUSTIC_CLASSES, "epoch": epoch}, output_path)
             print(f"  --> Saved Best Model Checkpoint: {output_path}")
 
-    print(f"[✓] Training Completed. Best weights exported to {output_path}")
+    print(f"[OK] Training Completed. Best weights exported to {output_path}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train Acoustic Crash Classifier")
