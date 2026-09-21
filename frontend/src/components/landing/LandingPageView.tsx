@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Github, ArrowRight, Shield, Radio, Ambulance, Users,
+  ArrowRight, Shield, Radio, Ambulance, Users,
   Activity, MapPin, Eye, Zap, CheckCircle2, ChevronDown, ExternalLink,
-  Code2, AlertTriangle, Video, Sparkles
+  Code2, AlertTriangle, Video, Sparkles, GitPullRequest
 } from 'lucide-react';
 
 interface LandingPageViewProps {
@@ -114,7 +114,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
             title="View Source on GitHub"
             className="w-9 h-9 rounded-xl bg-white border border-slate-200 hover:border-slate-300 shadow-sm flex items-center justify-center text-slate-700 hover:text-black transition-all hover:scale-105"
           >
-            <Github className="w-4 h-4" />
+            <GitPullRequest className="w-4 h-4" />
           </a>
         </div>
       </nav>
@@ -164,7 +164,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
               rel="noopener noreferrer"
               className="px-6 py-4 rounded-2xl bg-slate-900 hover:bg-black text-white font-mono font-bold text-xs shadow-md transition-all flex items-center gap-2"
             >
-              <Github className="w-4 h-4" />
+              <GitPullRequest className="w-4 h-4" />
               <span>GitHub Repo</span>
             </a>
           </div>
@@ -375,7 +375,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
               rel="noopener noreferrer"
               className="px-6 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-bold text-xs flex items-center gap-2 shadow-lg transition-all"
             >
-              <Github className="w-4 h-4" />
+              <GitPullRequest className="w-4 h-4" />
               <span>Open on GitHub</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </a>

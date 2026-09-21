@@ -1,23 +1,25 @@
 import numpy as np
+import cv2
 from typing import List, Optional
 
 def extract_vehicle_dna_from_crop(image_array: Optional[np.ndarray], vehicle_type: str = "car", color: str = "White") -> List[float]:
     """
     Computes a normalized 8-dimensional Vehicle DNA embedding vector:
-    - Dimensions 0-2: Color distribution (R, G, B balance or Hue/Saturation)
-    - Dimensions 3-4: Aspect ratio & scale features
-    - Dimensions 5-7: Texture & edge complexity features
+    - Dimensions 0-2: Color moments (R, G, B normalized means)
+    - Dimensions 3-4: Aspect ratio & intensity variation (Std dev)
+    - Dimensions 5-7: Texture percentiles & edge complexity
     """
     if image_array is not None and isinstance(image_array, np.ndarray) and image_array.size > 0:
-        # Calculate color moments
-        r_mean = float(np.mean(image_array[:, :, 0])) / 255.0 if image_array.ndim >= 3 else 0.5
-        g_mean = float(np.mean(image_array[:, :, 1])) / 255.0 if image_array.ndim >= 3 else 0.5
-        b_mean = float(np.mean(image_array[:, :, 2])) / 255.0 if image_array.ndim >= 3 else 0.5
+        # Convert BGR to RGB
+        rgb = cv2.cvtColor(image_array, cv2.COLOR_BGR2RGB) if image_array.ndim >= 3 else image_array
         
-        # Calculate aspect ratio
-        h, w = image_array.shape[:2]
-        aspect = float(w / max(1, h)) / 3.0 # normalized
-        std_intensity = float(np.std(image_array)) / 128.0
+        r_mean = float(np.mean(rgb[:, :, 0])) / 255.0 if rgb.ndim >= 3 else 0.5
+        g_mean = float(np.mean(rgb[:, :, 1])) / 255.0 if rgb.ndim >= 3 else 0.5
+        b_mean = float(np.mean(rgb[:, :, 2])) / 255.0 if rgb.ndim >= 3 else 0.5
+        
+        h, w = rgb.shape[:2]
+        aspect = float(w / max(1, h)) / 3.0
+        std_intensity = float(np.std(rgb)) / 128.0
         
         vector = [
             round(r_mean, 4),
@@ -25,13 +27,13 @@ def extract_vehicle_dna_from_crop(image_array: Optional[np.ndarray], vehicle_typ
             round(b_mean, 4),
             round(min(1.0, aspect), 4),
             round(min(1.0, std_intensity), 4),
-            round(float(np.median(image_array)) / 255.0, 4),
-            round(float(np.percentile(image_array, 75)) / 255.0, 4),
-            round(float(np.percentile(image_array, 25)) / 255.0, 4)
+            round(float(np.median(rgb)) / 255.0, 4),
+            round(float(np.percentile(rgb, 75)) / 255.0, 4),
+            round(float(np.percentile(rgb, 25)) / 255.0, 4)
         ]
         return vector
 
-    # Deterministic fallback synthetic embedding based on visual attributes
+    # If no image crop provided, generate vector from physical attributes
     color_map = {
         "white": [0.92, 0.92, 0.94, 0.60, 0.20, 0.90, 0.95, 0.85],
         "black": [0.12, 0.14, 0.15, 0.65, 0.25, 0.15, 0.20, 0.10],
@@ -43,7 +45,6 @@ def extract_vehicle_dna_from_crop(image_array: Optional[np.ndarray], vehicle_typ
     }
     base = color_map.get(color.lower(), [0.5, 0.5, 0.5, 0.6, 0.3, 0.5, 0.6, 0.4])
     
-    # Adjust slightly by vehicle type
     type_shift = {"car": 0.0, "suv": 0.05, "truck": 0.15, "bus": 0.20, "motorbike": -0.10, "ambulance": 0.08}
     shift = type_shift.get(vehicle_type.lower(), 0.0)
     adjusted = [round(min(1.0, max(0.0, val + (i % 2 == 0 and shift or -shift))), 4) for i, val in enumerate(base)]

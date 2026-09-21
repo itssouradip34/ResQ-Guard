@@ -16,6 +16,9 @@ import { MobilePatrolApp } from './components/mobile/MobilePatrolApp';
 import { LiveVideoMonitoring } from './components/live_video/LiveVideoMonitoring';
 import { OCRStudioView } from './components/ocr_studio/OCRStudioView';
 import { HowItWorksView } from './components/architecture/HowItWorksView';
+import { AccidentSOSPanel } from './components/accidents/AccidentSOSPanel';
+import { HeiwaCrimePortal } from './components/crime/HeiwaCrimePortal';
+import { NodeForwardingMetricsView } from './components/node_forwarding/NodeForwardingMetrics';
 import { Camera, VehicleEvent, Alert, Trajectory, ResQRouteScenario } from './types';
 import { api } from './services/api';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -193,6 +196,12 @@ export const App: React.FC = () => {
                 onSelectVehicleForTracking={handleSelectVehicleForTrajectoryByPlate}
               />
             )}
+
+            {activeTab === 'accident_sos' && <AccidentSOSPanel />}
+
+            {activeTab === 'heiwa_crime' && <HeiwaCrimePortal />}
+
+            {activeTab === 'node_forwarding' && <NodeForwardingMetricsView />}
 
             {activeTab === 'ocr_studio' && <OCRStudioView />}
 

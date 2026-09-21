@@ -11,6 +11,9 @@ from .assistant import AssistantQueryLog
 from .registry import MockVehicleRegistry, PlateIntegrityFlag
 from .citizen import CitizenReport
 from .audit import AuditLog
+from .node_handoff import VehicleToken, NodeHandoffPacket
+from .accident import AccidentIncident, SOSDispatch
+from .crime import CrimePoseEvent
 
 __all__ = [
     "Camera",
@@ -27,5 +30,10 @@ __all__ = [
     "MockVehicleRegistry",
     "PlateIntegrityFlag",
     "CitizenReport",
-    "AuditLog"
+    "AuditLog",
+    "VehicleToken",
+    "NodeHandoffPacket",
+    "AccidentIncident",
+    "SOSDispatch",
+    "CrimePoseEvent"
 ]

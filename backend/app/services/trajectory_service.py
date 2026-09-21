@@ -116,7 +116,6 @@ class TrajectoryService:
         """FR-06.3: Returns the vehicle path as GeoJSON with detailed metadata."""
         traj = db.query(Trajectory).filter(Trajectory.vehicle_id == vehicle_id).first()
         if not traj:
-            # Try computing on the fly
             traj = TrajectoryService.update_vehicle_trajectory(db, vehicle_id)
             if not traj:
                 return None
@@ -139,8 +138,8 @@ class TrajectoryService:
     @staticmethod
     def predict_next_trajectory(db: Session, vehicle_id: str) -> Dict[str, Any]:
         """
-        F-13: Predictive Vehicle Trajectory using Markov transition matrix over historical camera movements.
-        Returns top-3 likely next cameras with probabilities.
+        F-13: Predictive Vehicle Trajectory using a dynamic Markov transition matrix
+        learned directly from all historical vehicle trajectories in the database.
         """
         vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
         if not vehicle:
@@ -151,12 +150,14 @@ class TrajectoryService:
             VehicleEvent.vehicle_id == vehicle_id
         ).order_by(VehicleEvent.timestamp.desc()).first()
 
-        current_cam_id = latest_event.camera_id if latest_event else "cam-01"
-        camera_map = {c.id: c for c in db.query(Camera).all()}
+        all_cameras = db.query(Camera).all()
+        camera_map = {c.id: c for c in all_cameras}
+
+        current_cam_id = latest_event.camera_id if latest_event else (all_cameras[0].id if all_cameras else "cam-01")
         current_cam = camera_map.get(current_cam_id)
         current_name = current_cam.name if current_cam else current_cam_id
 
-        # Build Markov transition matrix from all historical trajectories
+        # 1. Learn Markov transition counts from historical events in the database
         transitions = defaultdict(lambda: defaultdict(int))
         all_events = db.query(VehicleEvent).order_by(VehicleEvent.vehicle_id, VehicleEvent.timestamp.asc()).all()
 
@@ -166,29 +167,33 @@ class TrajectoryService:
             if curr_e.vehicle_id == next_e.vehicle_id and curr_e.camera_id != next_e.camera_id:
                 transitions[curr_e.camera_id][next_e.camera_id] += 1
 
-        # Seed realistic topological defaults for Delhi-NCR corridor network
-        default_network = {
-            "cam-01": {"cam-02": 18, "cam-03": 12, "cam-04": 6},
-            "cam-02": {"cam-03": 22, "cam-04": 15, "cam-01": 8},
-            "cam-03": {"cam-04": 25, "cam-05": 14, "cam-02": 9},
-            "cam-04": {"cam-03": 16, "cam-05": 20, "cam-06": 12},
-            "cam-05": {"cam-06": 28, "cam-04": 14, "cam-03": 7},
-            "cam-06": {"cam-05": 24, "cam-04": 10, "cam-01": 5}
-        }
-
-        counts = transitions.get(current_cam_id) or default_network.get(current_cam_id, {"cam-02": 10, "cam-03": 5, "cam-04": 3})
-        total_transitions = sum(counts.values()) or 1
+        observed_counts = transitions.get(current_cam_id, {})
         
+        # 2. If observed transitions are sparse, calculate spatial neighbor probabilities
+        candidate_scores = {}
+        if current_cam:
+            for other_cam in all_cameras:
+                if other_cam.id == current_cam_id:
+                    continue
+                dist = calculate_geo_distance(current_cam.latitude, current_cam.longitude, other_cam.latitude, other_cam.longitude)
+                # Closer cameras receive higher prior probability
+                dist_score = 1.0 / max(0.5, dist)
+                hist_count = observed_counts.get(other_cam.id, 0)
+                # Combine historical sightings + spatial proximity
+                combined_weight = (hist_count * 3.0) + dist_score
+                candidate_scores[other_cam.id] = combined_weight
+
+        total_weight = sum(candidate_scores.values()) or 1.0
+
         predictions = []
-        for next_id, count in sorted(counts.items(), key=lambda x: x[1], reverse=True)[:3]:
-            prob = round(count / total_transitions, 3)
+        for next_id, weight in sorted(candidate_scores.items(), key=lambda x: x[1], reverse=True)[:3]:
+            prob = round(weight / total_weight, 3)
             nxt_cam = camera_map.get(next_id)
             
-            # Estimate arrival time based on distance
-            dist_km = 3.5
+            dist_km = 2.0
             if current_cam and nxt_cam:
                 dist_km = calculate_geo_distance(current_cam.latitude, current_cam.longitude, nxt_cam.latitude, nxt_cam.longitude)
-            est_min = round(max(1.5, (dist_km / 45.0) * 60.0), 1)
+            est_min = round(max(1.0, (dist_km / 45.0) * 60.0), 1)
 
             predictions.append({
                 "next_camera_id": next_id,

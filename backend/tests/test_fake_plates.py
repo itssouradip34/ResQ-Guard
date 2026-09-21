@@ -44,4 +44,13 @@ def test_digital_twin_scenarios():
     assert res.status_code == 200
     data = res.json()
     assert len(data) >= 2
-    assert "delta_percentage" in data[0]
+    assert "id" in data[0]
+    assert "name" in data[0]
+
+    # Test junction simulation endpoint
+    sim_res = client.get("/api/v1/digital-twin/junction/cam-01/simulate?scenario_id=add_green_time")
+    assert sim_res.status_code == 200
+    sim_data = sim_res.json()
+    assert "delay_improvement_pct" in sim_data
+    assert "baseline_avg_delay_sec" in sim_data
+    assert "scenario_avg_delay_sec" in sim_data

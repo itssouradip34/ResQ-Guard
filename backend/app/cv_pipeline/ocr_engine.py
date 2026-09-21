@@ -18,7 +18,11 @@ import os
 from typing import Dict, Any, Tuple
 
 import numpy as np
-import easyocr
+
+try:
+    import easyocr
+except ImportError:
+    easyocr = None
 
 # --- Config -------------------------------------------------------------
 # Your fine-tuned EasyOCR model. EasyOCR's Reader loads custom models by
@@ -38,6 +42,9 @@ EASYOCR_GPU = os.getenv("EASYOCR_GPU", "true").lower() == "true"
 
 class PlateOCREngine:
     def __init__(self):
+        self.reader = None
+        if easyocr is None:
+            return
         # lang_list=['en'] is right for Indian plates (Latin alphanumeric).
         # Check if custom model directories actually exist; otherwise fall back to standard stock English recognizer
         try:
@@ -52,7 +59,10 @@ class PlateOCREngine:
             else:
                 self.reader = easyocr.Reader(["en"], gpu=EASYOCR_GPU)
         except Exception:
-            self.reader = easyocr.Reader(["en"], gpu=False)
+            try:
+                self.reader = easyocr.Reader(["en"], gpu=False)
+            except Exception:
+                self.reader = None
 
     def read_plate(self, plate_crop: np.ndarray) -> Tuple[str, float]:
         """
@@ -68,10 +78,14 @@ class PlateOCREngine:
                  fragments were found on the crop (rare for a tight crop,
                  but plates with two-line stacked text can split).
         """
-        if plate_crop is None or plate_crop.size == 0:
+        if plate_crop is None or plate_crop.size == 0 or self.reader is None:
             return "", 0.0
 
-        detections = self.reader.readtext(plate_crop)
+        try:
+            detections = self.reader.readtext(plate_crop)
+        except Exception:
+            return "", 0.0
+
         if not detections:
             return "", 0.0
 
@@ -91,7 +105,7 @@ def run_single_engine(plate_crop: np.ndarray, engine: PlateOCREngine) -> Dict[st
     the real normalize/validate logic from plate_ocr.py -- import it from
     your existing module rather than duplicating it here.
     """
-    from app.cv_pipeline.plate_ocr import normalize_plate_text, validate_indian_plate
+    from .plate_ocr import normalize_plate_text, validate_indian_plate
 
     raw_text, conf = engine.read_plate(plate_crop)
     norm = normalize_plate_text(raw_text)

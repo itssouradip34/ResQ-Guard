@@ -14,7 +14,11 @@ import os
 from typing import Tuple
 
 import numpy as np
-from paddleocr import PaddleOCR
+
+try:
+    from paddleocr import PaddleOCR
+except ImportError:
+    PaddleOCR = None
 
 PADDLE_USE_GPU = os.getenv("PADDLE_USE_GPU", "false").lower() == "true"
 PADDLE_LANG = os.getenv("PADDLE_LANG", "en")
@@ -22,14 +26,18 @@ PADDLE_LANG = os.getenv("PADDLE_LANG", "en")
 
 class PlatePaddleEngine:
     def __init__(self):
-        # use_angle_cls=False -- plate crops from detector.py are already
-        # roughly upright, don't need PaddleOCR's angle-classification step.
-        self.reader = PaddleOCR(
-            use_angle_cls=False,
-            lang=PADDLE_LANG,
-            use_gpu=PADDLE_USE_GPU,
-            show_log=False,
-        )
+        self.reader = None
+        if PaddleOCR is None:
+            return
+        try:
+            self.reader = PaddleOCR(
+                use_angle_cls=False,
+                lang=PADDLE_LANG,
+                use_gpu=PADDLE_USE_GPU,
+                show_log=False,
+            )
+        except Exception:
+            self.reader = None
 
     def read_plate(self, plate_crop: np.ndarray) -> Tuple[str, float]:
         """
@@ -43,10 +51,13 @@ class PlatePaddleEngine:
                  per-line confidence, averaged across lines if the plate
                  crop produced multiple text fragments.
         """
-        if plate_crop is None or plate_crop.size == 0:
+        if plate_crop is None or plate_crop.size == 0 or self.reader is None:
             return "", 0.0
 
-        result = self.reader.ocr(plate_crop, cls=False)
+        try:
+            result = self.reader.ocr(plate_crop, cls=False)
+        except Exception:
+            return "", 0.0
 
         # PaddleOCR returns [[[box, (text, conf)], ...]] per image, or
         # [None] / [[]] when nothing is detected -- guard against both.

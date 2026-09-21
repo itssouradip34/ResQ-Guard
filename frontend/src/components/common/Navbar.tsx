@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   Shield, Radio, AlertTriangle, Eye, EyeOff, Smartphone,
   Activity, Map, BarChart3, Video, Search, MessageSquare,
-  Ambulance, Cpu, FileText, Lock, Code2, Zap
+  Ambulance, Cpu, FileText, Lock, Code2, Zap,
+  AlertOctagon, ShieldAlert, Network
 } from 'lucide-react';
 import { useAuthRole } from '../../context/AuthRoleContext';
 import { StatusPill } from './StatusPill';
@@ -40,16 +41,19 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, []);
 
   const navTabs = [
-    { id: 'live_video', label: 'Live Lane Feeds', icon: Video, highlight: true, badge: 'LIVE' },
+    { id: 'live_video', label: 'Live Feeds', icon: Video, highlight: true, badge: 'LIVE' },
+    { id: 'accident_sos', label: 'Accident SOS', icon: AlertOctagon, highlight: true, badge: 'SOS' },
+    { id: 'heiwa_crime', label: 'Heiwa Safety', icon: ShieldAlert, highlight: true, badge: '17-NODE' },
+    { id: 'node_forwarding', label: 'Edge Forwarding', icon: Network, badge: '79% SAVED' },
     { id: 'map', label: 'GIS Command Map', icon: Map },
-    { id: 'ocr_studio', label: 'ANPR & OCR Studio', icon: Cpu, badge: '>90%' },
-    { id: 'vehicles', label: 'Trajectory Tracking', icon: Search },
+    { id: 'ocr_studio', label: 'OCR Studio', icon: Cpu, badge: '>90%' },
+    { id: 'vehicles', label: 'Trajectories', icon: Search },
     { id: 'analytics', label: 'Macro Analytics', icon: BarChart3 },
     { id: 'resqroute', label: 'ResQRoute 2.0', icon: Ambulance, highlight: true },
     { id: 'cameras', label: 'Camera Matrix', icon: Activity },
     { id: 'how_it_works', label: 'How It Works', icon: Code2 },
     { id: 'digital_twin', label: 'Digital Twin', icon: Zap },
-    { id: 'governance', label: 'Governance & Audit', icon: Lock }
+    { id: 'governance', label: 'Governance', icon: Lock }
   ];
 
   return (

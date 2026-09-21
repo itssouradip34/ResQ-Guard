@@ -30,6 +30,9 @@ from .api.v1.digital_twin import router as digital_twin_router
 from .api.v1.citizen import router as citizen_router
 from .api.v1.governance import router as governance_router
 from .api.v1.ocr_studio import router as ocr_studio_router
+from .api.v1.node_forwarding import router as node_forwarding_router
+from .api.v1.accidents import router as accidents_router
+from .api.v1.crime import router as crime_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -91,6 +94,9 @@ app.include_router(digital_twin_router, prefix=api_v1_prefix)
 app.include_router(governance_router, prefix=api_v1_prefix)
 app.include_router(citizen_router, prefix=api_v1_prefix) # includes /report and /public/stats
 app.include_router(ocr_studio_router, prefix=api_v1_prefix)
+app.include_router(node_forwarding_router, prefix=api_v1_prefix)
+app.include_router(accidents_router, prefix=api_v1_prefix)
+app.include_router(crime_router, prefix=api_v1_prefix)
 
 # WebSockets
 @app.websocket("/ws/live-feed")

@@ -1,61 +1,99 @@
-# ResQ-Guard
+# ResQ-Guard: City-Wide AI ANPR & Vehicle Intelligence Platform
+### *Integrated with ResQRoute 2.0 Emergency Corridor Optimization (Web & Mobile Patrol)*
 
-**City-Wide AI Engine for Multi-Camera ANPR Trajectory Tracking and Urban Traffic Analytics**
-
-Built for Smart India Hackathon 2026 — Team Codester
-
----
-
-## Overview
-
-ResQ-Guard turns a city's existing CCTV network into a single, connected vehicle-intelligence grid — not a collection of isolated plate-readers. Every camera feeds into one unified pipeline that detects vehicles, reads license plates, reconstructs a vehicle's full multi-camera journey across the city, and surfaces all of it on a live command-center dashboard for law enforcement and traffic planners.
-
-The platform is designed as a **Smart City & Police Command Center Operations Solution**, combining automatic number plate recognition (ANPR), cross-camera trajectory reconstruction, real-time GIS visualization, and an emergency vehicle green-corridor dispatch system into a single deployable product.
-
-## Features
-
-- **Multi-Camera ANPR** — YOLOv8-based vehicle and plate detection with ByteTrack tracking, fed into a dual-engine OCR (PaddleOCR + EasyOCR) with confidence fusion for high-accuracy plate reads.
-- **Cross-Camera Trajectory Reconstruction** — Stitches detections from multiple, non-overlapping cameras into one continuous vehicle journey across the city.
-- **Live GIS Command Map** — Real-time vehicle movement, camera health, and trajectory replay on an interactive city map, with CCTV stream popups and bounding-box overlays.
-- **ResQRoute — Emergency Green Corridor** — A 4-stage automated dispatch workflow (Dispatch → Signal Preemption → Green Wave Locked → Hospital Handover) that clears a live path for ambulances through traffic signal preemption.
-- **Traffic & Security Analytics** — City-wide congestion patterns, density heatmaps, and automated blacklist/suspicious-route alerts for law enforcement.
-- **Vehicle Intelligence Dossiers** — Per-vehicle case files with sighting history, trajectory replay, and officer case-note logging for investigations.
-- **AI City Assistant** — A conversational interface for querying traffic and camera data in natural language, with exportable reports.
-- **Mobile Patrol App** — A field-ready PWA for officers, with rapid plate scanning and one-tap dispatch actions.
-- **Camera Health Monitoring** — Live FPS/latency dashboards with automated failover detection across the camera network.
-
-## Architecture
-
-ResQ-Guard runs on a single core event pipeline that every feature reads from or writes to, so new capabilities plug in without reworking existing ones:
-
-```
-Camera / CCTV Feed
-      │
-      ▼
-CV Pipeline (YOLOv8 detect + track, dual-OCR plate read)
-      │
-      ▼
-Backend API (validate, enrich, persist events)
-      │
-      ▼
-Database & Cache (PostgreSQL + PostGIS, Redis pub/sub)
-      │
-      ▼
-Frontend Dashboard (live map + analytics via WebSocket)
-```
-
-**Per-camera CV workers** run as independent processes, so scaling to more cameras is a matter of spinning up more workers rather than rearchitecting the pipeline. The **backend** is a modular monolith (FastAPI) — each capability (vehicles, cameras, trajectories, alerts, analytics, ResQRoute) is its own router and service. **Real-time delivery** is handled via Redis pub/sub feeding WebSocket connections straight to the frontend map and dashboard.
-
-### Tech stack
-
-| Layer | Technology |
-|---|---|
-| Computer Vision / AI | YOLOv8, ByteTrack, PaddleOCR, EasyOCR, OpenCV |
-| Backend | FastAPI (Python, async), WebSocket |
-| Database | PostgreSQL + PostGIS, Redis |
-| Frontend | React, Vite, TypeScript, TailwindCSS, MapLibre GL JS |
-| Routing / GIS | OSRM, OSMnx / NetworkX |
+ResQ-Guard is an engineering-ready, city-wide vehicle intelligence and spatial tracking software platform. It ingests live multi-camera feeds, extracts license plates using dual-engine OCR with confidence fusion, reconstructs multi-camera vehicle trajectories on an interactive GIS map, and detects hotlisted, stolen, or cloned vehicles with Explainable-AI (XAI) alerting.
 
 ---
 
-*Status: In development for SIH 2026.*
+## 🌟 Key Features (Releases 0 – 4)
+
+| Feature ID | Name | Description | Priority |
+| :--- | :--- | :--- | :--- |
+| **F-01** | **Camera Ingestion & Registry** | Live RTSP / looped video ingestion, lat/lng spatial registry, and heartbeat monitoring. | **P0 (Must)** |
+| **F-02** | **Vehicle Detection & Tracking** | YOLOv8 multi-class detection with persistent ByteTrack tracking IDs. | **P0 (Must)** |
+| **F-03 & F-04** | **Dual-Engine OCR & Fusion** | PaddleOCR + EasyOCR fusion, Indian plate regex validator, and `needs_review` flagging. | **P0 / P1** |
+| **F-05** | **Event Ingestion API** | High-throughput `POST /api/v1/ingestion/event` with fuzzy plate matching ($\ge 90\%$). | **P0 (Must)** |
+| **F-06** | **Trajectory Reconstruction** | Spatial-temporal aggregation into GeoJSON multi-point / line-string trajectories. | **P0 (Must)** |
+| **F-07** | **GIS Live Map Command Center** | Interactive dark command map with `< 2s` live vehicle pins via WebSocket. | **P0 (Must)** |
+| **F-08** | **Traffic Analytics Dashboard** | Real-time hourly volume series, vehicle breakdown, peak hour metrics, and zone heatmaps. | **P0 (Must)** |
+| **F-09** | **Blacklist & Alerting Engine** | Real-time alert push for hotlist targets and restricted municipal geofences. | **P0 (Must)** |
+| **F-10** | **Camera Health Monitoring** | Live FPS telemetry, uptime percentage, and automated failover detection. | **P1 (Should)** |
+| **F-11** | **Vehicle DNA / Visual Re-ID** | 8D visual embeddings + cosine distance search for obscured/unreadable plates. | **P1 (Should)** |
+| **F-12** | **AI Rule-Based Incidents** | Automated detection for stalled vehicles, wrong-way driving, and rapid collision deceleration. | **P1 (Should)** |
+| **F-13 & F-14** | **Predictive AI Engine** | Markov transition matrix for next-camera prediction + rolling congestion forecasting. | **P2 (Could)** |
+| **F-15** | **AI City Assistant** | Natural-language query interface translating questions into safe, audited SQL queries. | **P2 (Could)** |
+| **F-16** | **Privacy Governance** | Role-based plate masking (`MP04 XX ****`), SHA-256 hashing, and security audit logging. | **P2 (Could)** |
+| **F-17** | **Fake & Cloned Plate Detection** | Flags registry type mismatches and impossible travel anomalies ($> 160$ km/h). | **P2 (Could)** |
+| **F-18** | **Multi-Modal Vehicle Search** | Free-text search ("white SUV near Central Zone") with candidate ranking & snapshots. | **P2 (Could)** |
+| **F-19** | **Explainable-AI Alert Panel** | Human-readable breakdown of triggered rules, confidence weights, and verified evidence. | **P1 (Should)** |
+| **F-20** | **Citizen Transparency Portal** | Crowdsourced citizen hazard reporting + anonymized public safety statistics. | **P3 (Stub)** |
+| **F-21 & F-22** | **ResQRoute 2.0 Corridor** | Congestion-weighted green wave emergency ambulance routing ($-51.7\%$ travel time). | **P3 (Stub)** |
+| **F-23** | **Digital Twin What-If Simulator** | Simulates junction signal changes and lane closures with before/after metrics. | **P3 (Stub)** |
+
+---
+
+## 🚀 Quickstart & Execution Guide
+
+### Option 1: One-Command Docker Compose (Full Stack)
+```bash
+docker compose up --build
+```
+- **Web Command Center & Mobile App**: `http://localhost:5173`
+- **FastAPI Backend & Interactive Swagger Docs**: `http://localhost:8000/docs`
+
+---
+
+### Option 2: Local Development Setup
+
+#### 1. Backend (FastAPI + Python 3.10+)
+```bash
+cd backend
+python -m pip install -r requirements.txt
+python run_backend.py
+```
+*Backend runs on `http://127.0.0.1:8000` with automated startup seeding and background stream runner.*
+
+#### 2. Frontend (React 19 + Vite + Tailwind CSS)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+*Frontend runs on `http://localhost:5173`.*
+
+#### 3. Run Backend Test Suite
+```bash
+python -m pytest backend/tests/
+```
+
+---
+
+## 🎬 Scripted Live Demo Guide (PRD Section 11)
+
+Follow these exact steps for the staged presentation:
+
+1. **Boot Stack & Ingestion Ready**:
+   - Open `http://localhost:5173`.
+   - Observe 6 active camera nodes on the GIS Command Map and live WebSocket connection pill (`LIVE FEED`).
+
+2. **Live Sighting & Pin Update (< 2s)**:
+   - Use the **Demo Sighting Injector** in the bottom-left of the GIS Map to trigger a sighting for plate `DL01AB1234` on `Camera 01`.
+   - Notice the live pin appears on the map within 2 seconds without page refresh.
+
+3. **Multi-Camera Trajectory Reconstruction**:
+   - Click the vehicle pin and select **"Reconstruct Trajectory"** (or switch to the **Vehicle Intelligence** tab).
+   - Observe the stitched polyline path connecting checkpoints across the city with timestamps and recorded speeds.
+
+4. **Blacklist Hit & Explainable AI (XAI)**:
+   - Inject a sighting for hotlisted target `DL01AB1234` or `MH02CD5678`.
+   - A real-time red alert toast fires immediately. Click **"Explain (XAI)"** to inspect the Plain-Language Reason, triggered rules, and verified snapshot crop.
+
+5. **Cloned Plate / Impossible Travel Detection (F-17)**:
+   - Observe the `fake_plate_suspected` alert triggered when `MH02CD5678` is sighted across two distant cameras in an implausible timeframe.
+
+6. **Traffic Flow Analytics & Congestion Forecast (F-08 & F-14)**:
+   - Open the **Traffic Analytics** tab to view real-time hourly volume series, vehicle type distribution, and predictive 15/30/60-min forecasts.
+
+7. **Camera Outage Simulation (F-10)**:
+   - Open the **Camera Health** tab. Click **"Simulate Outage (Kill Camera)"** on Camera 01.
+   - The status flips immediately to `OFFLINE` and is logged in the health telemetry.

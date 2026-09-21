@@ -3,6 +3,7 @@ from typing import Dict, Any, List
 from collections import defaultdict
 from sqlalchemy.orm import Session
 from ..models.event import VehicleEvent
+from ..models.vehicle import Vehicle
 from ..models.camera import Camera
 from ..models.road_segment import RoadSegment
 from ..models.alert import Alert
@@ -10,18 +11,22 @@ from ..models.alert import Alert
 class AnalyticsService:
     @staticmethod
     def get_traffic_volume(db: Session, hours: int = 24) -> List[Dict[str, Any]]:
-        """FR-08.2: GET /api/v1/analytics/traffic-volume returns time-bucketed series."""
+        """
+        FR-08.2: GET /api/v1/analytics/traffic-volume returns real time-bucketed series
+        aggregated dynamically from vehicle_events in the database.
+        """
         now = datetime.utcnow()
         since = now - timedelta(hours=hours)
         
-        events = db.query(VehicleEvent).filter(VehicleEvent.timestamp >= since).all()
+        events = db.query(VehicleEvent).filter(VehicleEvent.timestamp >= since).order_by(VehicleEvent.timestamp.asc()).all()
         
         buckets = defaultdict(lambda: {"volume": 0, "by_type": defaultdict(int), "by_camera": defaultdict(int)})
         
         for e in events:
             hour_str = e.timestamp.strftime("%H:00")
             buckets[hour_str]["volume"] += 1
-            buckets[hour_str]["by_type"][e.vehicle_type] += 1
+            v_type = e.vehicle_type or "car"
+            buckets[hour_str]["by_type"][v_type] += 1
             buckets[hour_str]["by_camera"][e.camera_id] += 1
 
         series = []
@@ -33,36 +38,28 @@ class AnalyticsService:
                 "by_type": dict(b["by_type"]),
                 "by_camera": dict(b["by_camera"])
             })
-            
-        # Ensure at least minimal formatted timeline if no fresh events
-        if not series:
-            for h in range(max(0, now.hour - 6), now.hour + 1):
-                h_str = f"{h:02d}:00"
-                series.append({
-                    "time_bucket": h_str,
-                    "volume": 120 + (h * 15),
-                    "by_type": {"car": 80, "suv": 25, "truck": 10, "motorbike": 15},
-                    "by_camera": {"cam-01": 45, "cam-02": 40, "cam-03": 35}
-                })
 
         return series
 
     @staticmethod
     def get_heatmap_geojson(db: Session) -> Dict[str, Any]:
-        """FR-08.3: GET /api/v1/analytics/heatmap returns zone-level density as GeoJSON."""
+        """
+        FR-08.3: GET /api/v1/analytics/heatmap returns zone-level density as GeoJSON,
+        computed dynamically from actual sightings per camera in each zone.
+        """
         cameras = db.query(Camera).all()
         events = db.query(VehicleEvent).all()
         
         zone_counts = defaultdict(int)
         zone_speeds = defaultdict(list)
         for e in events:
-            # find camera zone
             cam = next((c for c in cameras if c.id == e.camera_id), None)
             zone = cam.zone if cam else "Central Zone"
             zone_counts[zone] += 1
-            zone_speeds[zone].append(e.speed_estimate)
+            if e.speed_estimate is not None:
+                zone_speeds[zone].append(e.speed_estimate)
 
-        # Predefined polygons for city surveillance zones in Delhi
+        # Spatial polygons for metropolitan zones
         zone_polygons = {
             "Central Zone": [
                 [77.2000, 28.6400], [77.2400, 28.6400],
@@ -84,16 +81,16 @@ class AnalyticsService:
 
         features = []
         for zone_name, poly_coords in zone_polygons.items():
-            count = zone_counts.get(zone_name, 45)
-            speeds = zone_speeds.get(zone_name, [48.0])
+            count = zone_counts.get(zone_name, 0)
+            speeds = zone_speeds.get(zone_name, [45.0])
             avg_speed = round(sum(speeds) / max(1, len(speeds)), 1)
             
             density_level = "low"
-            if count > 100:
+            if count > 80:
                 density_level = "severe"
-            elif count > 50:
+            elif count > 40:
                 density_level = "high"
-            elif count > 20:
+            elif count > 15:
                 density_level = "medium"
 
             features.append({
@@ -107,7 +104,7 @@ class AnalyticsService:
                     "vehicle_count": count,
                     "avg_speed_kmh": avg_speed,
                     "density_level": density_level,
-                    "congestion_index": min(1.0, round(count / 120.0, 2))
+                    "congestion_index": min(1.0, round(count / max(1, len(events) * 0.4 + 1), 2))
                 }
             })
 
@@ -118,7 +115,10 @@ class AnalyticsService:
 
     @staticmethod
     def get_dashboard_summary(db: Session) -> Dict[str, Any]:
-        """FR-08.4: Total vehicles today, peak hour, top zone, breakdown."""
+        """
+        FR-08.4: Total vehicles today, peak hour, top zone, and vehicle breakdown
+        computed dynamically from live database events.
+        """
         events = db.query(VehicleEvent).all()
         cameras = db.query(Camera).all()
         active_alerts = db.query(Alert).filter(Alert.acknowledged == False).count()
@@ -129,26 +129,21 @@ class AnalyticsService:
         speeds = []
 
         for e in events:
-            type_counts[e.vehicle_type] += 1
+            v_type = e.vehicle_type or "car"
+            type_counts[v_type] += 1
             hourly_counts[e.timestamp.strftime("%H:00")] += 1
-            speeds.append(e.speed_estimate)
+            if e.speed_estimate is not None:
+                speeds.append(e.speed_estimate)
             cam = next((c for c in cameras if c.id == e.camera_id), None)
             if cam:
                 zone_counts[cam.zone] += 1
 
-        # Defaults if sparse
-        if not type_counts:
-            type_counts = {"car": 420, "suv": 160, "truck": 45, "bus": 80, "motorbike": 210, "ambulance": 12}
-            hourly_counts = {"09:00": 180, "10:00": 240, "11:00": 210, "14:00": 195, "17:00": 290, "18:00": 340}
-            zone_counts = {"Central Zone": 450, "South Zone": 380, "West Zone": 210, "Airport Zone": 180}
-            speeds = [46.5]
-
-        total_vehicles = sum(type_counts.values())
-        peak_hour = max(hourly_counts.items(), key=lambda x: x[1])[0] if hourly_counts else "18:00"
-        peak_vol = hourly_counts.get(peak_hour, 340)
+        total_vehicles = len(events)
+        peak_hour = max(hourly_counts.items(), key=lambda x: x[1])[0] if hourly_counts else "N/A"
+        peak_vol = hourly_counts.get(peak_hour, 0)
         top_zone = max(zone_counts.items(), key=lambda x: x[1])[0] if zone_counts else "Central Zone"
-        top_zone_val = zone_counts.get(top_zone, 450)
-        avg_speed = round(sum(speeds) / max(1, len(speeds)), 1)
+        top_zone_val = zone_counts.get(top_zone, 0)
+        avg_speed = round(sum(speeds) / max(1, len(speeds)), 1) if speeds else 45.0
 
         return {
             "total_vehicles_today": total_vehicles,
@@ -166,30 +161,45 @@ class AnalyticsService:
     @staticmethod
     def get_predictive_congestion_forecast(db: Session) -> List[Dict[str, Any]]:
         """
-        F-14: Predictive Congestion Forecasting (next 15/30/60 min per road segment).
+        F-14: Predictive Congestion Forecasting (next 15/30/60 min per road segment)
+        derived from actual historical vehicle volume and segment camera sightings.
         """
         segments = db.query(RoadSegment).all()
+        cameras = db.query(Camera).all()
         now = datetime.utcnow()
         
+        # Build mapping of segment to camera sightings in past 2 hours
+        since_2h = now - timedelta(hours=2)
+        recent_events = db.query(VehicleEvent).filter(VehicleEvent.timestamp >= since_2h).all()
+        
+        # Count events per camera
+        cam_event_counts = defaultdict(int)
+        for e in recent_events:
+            cam_event_counts[e.camera_id] += 1
+
         forecasts = []
         for seg in segments:
-            # Deterministic predictive simulation model per road segment
-            base_vol = 140 if "Ring Road" in seg.name or "Express" in seg.name else 75
+            # Find cameras associated with this road segment or zone
+            matching_cams = [c for c in cameras if c.road_segment == seg.name or c.zone == seg.zone]
+            seg_volume = sum(cam_event_counts[c.id] for c in matching_cams)
+            
+            # Baseline density per hour derived from recent database records
+            base_vol = max(10, seg_volume * 2)
             
             for horizon_min in [15, 30, 60]:
                 target_time = now + timedelta(minutes=horizon_min)
                 
-                # simulate peak curve
-                multiplier = 1.35 if horizon_min == 30 else 1.15
+                # Predictive growth factor based on time horizon
+                multiplier = 1.25 if horizon_min == 30 else (1.10 if horizon_min == 15 else 1.35)
                 pred_volume = int(base_vol * multiplier)
                 
-                if pred_volume > 160:
+                if pred_volume > 100:
                     level = "severe"
-                    speed_drop = 22.0
-                elif pred_volume > 110:
+                    speed_drop = 20.0
+                elif pred_volume > 50:
                     level = "high"
-                    speed_drop = 14.0
-                elif pred_volume > 60:
+                    speed_drop = 12.0
+                elif pred_volume > 20:
                     level = "medium"
                     speed_drop = 6.0
                 else:

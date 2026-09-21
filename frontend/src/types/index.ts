@@ -342,3 +342,107 @@ export interface LaneStatus {
   greenCountdownSeconds: number;
 }
 
+export interface VehicleToken {
+  token_id: string;
+  plate_number: string;
+  vehicle_type: string;
+  color: string;
+  current_camera_id: string;
+  current_lat: number;
+  current_lng: number;
+  speed_kmh: number;
+  heading_deg: number;
+  trajectory_vector?: Array<{ lat: number; lng: number; t: string }>;
+  predicted_next_nodes: string[];
+  is_active: boolean;
+  last_updated: string;
+}
+
+export interface NodeHandoffPacket {
+  id: string;
+  token_id: string;
+  source_camera_id: string;
+  target_camera_id: string;
+  estimated_arrival_time: string;
+  transit_confidence: number;
+  payload_size_bytes: number;
+  acknowledged: boolean;
+  created_at: string;
+}
+
+export interface NodeForwardingMetrics {
+  total_registered_tokens: number;
+  active_tokens_in_transit: number;
+  total_edge_handoff_packets: number;
+  average_packet_size_bytes: number;
+  raw_payload_baseline_bytes: number;
+  bandwidth_reduction_pct: number;
+  latency_improvement_ms: number;
+}
+
+export interface SOSDispatch {
+  id: string;
+  incident_id: string;
+  incident_type: string;
+  nearest_hospital_name: string;
+  nearest_hospital_dist_km: number;
+  dispatched_ambulance_id: string;
+  dispatched_pcr_van_id: string;
+  green_corridor_id?: string;
+  estimated_arrival_minutes: number;
+  corridor_waypoints?: number[][];
+  cleared_signal_count: number;
+  status: string;
+  created_at: string;
+}
+
+export interface AccidentIncident {
+  id: string;
+  camera_id: string;
+  location_lat: number;
+  location_lng: number;
+  road_segment_name: string;
+  trigger_type: string;
+  severity: string;
+  confidence: number;
+  primary_vehicle_plate?: string;
+  secondary_vehicle_plate?: string;
+  lateral_accel_ms2?: number;
+  speed_drop_kmh?: number;
+  acoustic_signature?: string;
+  acoustic_db_level?: number;
+  evidence_snapshot_url?: string;
+  sos_activated: boolean;
+  sos_dispatch?: {
+    dispatch_id: string;
+    hospital_name: string;
+    hospital_dist_km: number;
+    ambulance_id: string;
+    pcr_van_id: string;
+    eta_minutes: number;
+    green_corridor_id?: string;
+    status: string;
+  };
+  created_at: string;
+}
+
+export interface CrimePoseEvent {
+  id: string;
+  camera_id: string;
+  location_lat: number;
+  location_lng: number;
+  zone_name: string;
+  action_type: string;
+  confidence: number;
+  severity: string;
+  person_count: number;
+  explanation: string;
+  police_sos_dispatched: boolean;
+  dispatched_patrol_unit?: string;
+  nearest_police_station?: string;
+  status: string;
+  evidence_crop_url?: string;
+  created_at: string;
+}
+
+

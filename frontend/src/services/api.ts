@@ -172,9 +172,17 @@ export const api = {
     return res.json();
   },
 
-  async getDigitalTwinScenarios(role?: UserRole): Promise<DigitalTwinScenario[]> {
+  async getDigitalTwinScenarios(role?: UserRole): Promise<any[]> {
     const res = await fetch(`${API_BASE}/digital-twin/scenarios`, { headers: getHeaders(role) });
     if (!res.ok) throw new Error('Failed to fetch digital twin scenarios');
+    return res.json();
+  },
+
+  async simulateJunction(junctionId: string, scenarioId: string, greenDeltaSec: number = 10, role?: UserRole): Promise<any> {
+    const res = await fetch(`${API_BASE}/digital-twin/junction/${junctionId}/simulate?scenario_id=${scenarioId}&green_time_delta_sec=${greenDeltaSec}`, {
+      headers: getHeaders(role)
+    });
+    if (!res.ok) throw new Error('Failed to run junction simulation');
     return res.json();
   },
 
@@ -222,5 +230,75 @@ export const api = {
     });
     if (!res.ok) throw new Error('Failed to simulate OCR');
     return res.json();
+  },
+
+  // Feature 1: Node Forwarding & Single-Address Tokens
+  async getNodeForwardingMetrics(role?: UserRole): Promise<any> {
+    const res = await fetch(`${API_BASE}/node-forwarding/metrics`, { headers: getHeaders(role) });
+    if (!res.ok) throw new Error('Failed to fetch node forwarding metrics');
+    return res.json();
+  },
+
+  async getVehicleTokens(role?: UserRole): Promise<any[]> {
+    const res = await fetch(`${API_BASE}/node-forwarding/tokens`, { headers: getHeaders(role) });
+    if (!res.ok) throw new Error('Failed to fetch vehicle tokens');
+    return res.json();
+  },
+
+  async getHandoffPackets(role?: UserRole): Promise<any[]> {
+    const res = await fetch(`${API_BASE}/node-forwarding/packets`, { headers: getHeaders(role) });
+    if (!res.ok) throw new Error('Failed to fetch handoff packets');
+    return res.json();
+  },
+
+  async triggerNodeHandoff(payload: any, role?: UserRole): Promise<any> {
+    const res = await fetch(`${API_BASE}/node-forwarding/handoff`, {
+      method: 'POST',
+      headers: getHeaders(role),
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Failed to trigger node handoff');
+    return res.json();
+  },
+
+  // Feature 2 & 3: Multi-Modal Accident Detection & ResQRoute SOS Dispatch
+  async getAccidentIncidents(role?: UserRole): Promise<any[]> {
+    const res = await fetch(`${API_BASE}/accidents/incidents`, { headers: getHeaders(role) });
+    if (!res.ok) throw new Error('Failed to fetch accident incidents');
+    return res.json();
+  },
+
+  async getSOSDispatches(role?: UserRole): Promise<any[]> {
+    const res = await fetch(`${API_BASE}/accidents/dispatches`, { headers: getHeaders(role) });
+    if (!res.ok) throw new Error('Failed to fetch SOS dispatches');
+    return res.json();
+  },
+
+  async simulateCrash(payload: any, role?: UserRole): Promise<any> {
+    const res = await fetch(`${API_BASE}/accidents/simulate-crash`, {
+      method: 'POST',
+      headers: getHeaders(role),
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Failed to simulate crash');
+    return res.json();
+  },
+
+  // Feature 4: Heiwa 17-Keypoint Skeletal Pose Crime Detection
+  async getCrimeEvents(role?: UserRole): Promise<any[]> {
+    const res = await fetch(`${API_BASE}/crime/events`, { headers: getHeaders(role) });
+    if (!res.ok) throw new Error('Failed to fetch crime events');
+    return res.json();
+  },
+
+  async simulateCrime(payload: any, role?: UserRole): Promise<any> {
+    const res = await fetch(`${API_BASE}/crime/simulate-incident`, {
+      method: 'POST',
+      headers: getHeaders(role),
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Failed to simulate crime incident');
+    return res.json();
   }
 };
+
