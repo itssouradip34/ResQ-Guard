@@ -112,13 +112,17 @@ class VehicleDetectorTracker:
         # 1. Vehicle detection + tracking
         vehicle_boxes = []
         if self.vehicle_model is not None:
-            track_results = self.vehicle_model.track(
-                frame,
-                persist=True,
-                conf=VEHICLE_CONF_THRESHOLD,
-                classes=list(COCO_VEHICLE_CLASS_MAP.keys()),
-                verbose=False,
-            )
+            try:
+                track_results = self.vehicle_model.track(
+                    frame,
+                    persist=True,
+                    conf=VEHICLE_CONF_THRESHOLD,
+                    classes=list(COCO_VEHICLE_CLASS_MAP.keys()),
+                    verbose=False,
+                    device='cpu',
+                )
+            except Exception:
+                track_results = None
             if track_results and track_results[0].boxes is not None:
                 boxes = track_results[0].boxes
                 for i in range(len(boxes)):
@@ -141,9 +145,13 @@ class VehicleDetectorTracker:
                     })
 
         # 2. Plate detection
-        plate_results = self.plate_model.predict(
-            frame, conf=PLATE_CONF_THRESHOLD, verbose=False
-        )
+        try:
+            plate_results = self.plate_model.predict(
+                frame, conf=PLATE_CONF_THRESHOLD, verbose=False, device='cpu'
+            )
+        except Exception:
+            plate_results = None
+
         plate_boxes = []
         if plate_results and plate_results[0].boxes is not None:
             boxes = plate_results[0].boxes
