@@ -33,6 +33,7 @@ from .api.v1.ocr_studio import router as ocr_studio_router
 from .api.v1.node_forwarding import router as node_forwarding_router
 from .api.v1.accidents import router as accidents_router
 from .api.v1.crime import router as crime_router
+from .api.v1.cv import router as cv_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -97,6 +98,7 @@ app.include_router(ocr_studio_router, prefix=api_v1_prefix)
 app.include_router(node_forwarding_router, prefix=api_v1_prefix)
 app.include_router(accidents_router, prefix=api_v1_prefix)
 app.include_router(crime_router, prefix=api_v1_prefix)
+app.include_router(cv_router, prefix=api_v1_prefix)
 
 # WebSockets
 @app.websocket("/ws/live-feed")

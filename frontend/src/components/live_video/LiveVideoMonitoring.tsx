@@ -54,7 +54,7 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
   const [playbackRate, setPlaybackRate] = useState<number>(1.0);
   const [selectedCameraForFocus, setSelectedCameraForFocus] = useState<string | null>(null);
 
-  // Define 4 Primary Surveillance Lanes mapped to real video files
+  // Define 4 Primary Surveillance Lanes mapped to real video files (initially empty detections)
   const [lanes, setLanes] = useState<SimulatedLane[]>([
     {
       id: 'lane-1',
@@ -64,12 +64,9 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
       videoSrc: '/static/videos/cam_01_connaught.mp4',
       signal: 'green',
       countdown: 18,
-      vehicleCount: 16,
+      vehicleCount: 0,
       density: 74,
-      detections: [
-        { id: 'd1', vehicleType: 'car', color: 'White', plate: 'DL01AB1234', confidence: 0.97, speed: 48, box: { top: 48, left: 32, width: 22, height: 28 }, isBlacklisted: true },
-        { id: 'd2', vehicleType: 'suv', color: 'Black', plate: 'HR26DQ5551', confidence: 0.94, speed: 52, box: { top: 38, left: 62, width: 18, height: 24 } }
-      ]
+      detections: []
     },
     {
       id: 'lane-2',
@@ -79,12 +76,9 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
       videoSrc: '/static/videos/cam_02_indiagate.mp4',
       signal: 'red',
       countdown: 0,
-      vehicleCount: 11,
+      vehicleCount: 0,
       density: 52,
-      detections: [
-        { id: 'd3', vehicleType: 'car', color: 'Silver', plate: 'DL08CX9920', confidence: 0.95, speed: 44, box: { top: 50, left: 24, width: 20, height: 26 } },
-        { id: 'd4', vehicleType: 'motorbike', color: 'Red', plate: 'DL04XY4021', confidence: 0.91, speed: 38, box: { top: 62, left: 54, width: 14, height: 20 } }
-      ]
+      detections: []
     },
     {
       id: 'lane-3',
@@ -94,12 +88,9 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
       videoSrc: '/static/videos/cam_03_ringroad.mp4',
       signal: 'red',
       countdown: 0,
-      vehicleCount: 22,
+      vehicleCount: 0,
       density: 88,
-      detections: [
-        { id: 'd5', vehicleType: 'truck', color: 'Yellow', plate: 'UP16CD8821', confidence: 0.92, speed: 36, box: { top: 44, left: 40, width: 24, height: 32 } },
-        { id: 'd6', vehicleType: 'car', color: 'Blue', plate: 'DL03MN7812', confidence: 0.96, speed: 58, box: { top: 56, left: 18, width: 19, height: 25 } }
-      ]
+      detections: []
     },
     {
       id: 'lane-4',
@@ -109,45 +100,71 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
       videoSrc: '/static/videos/cam_04_aiims.mp4',
       signal: 'red',
       countdown: 0,
-      vehicleCount: 8,
+      vehicleCount: 0,
       density: 38,
-      detections: [
-        { id: 'd7', vehicleType: 'ambulance', color: 'White/Red', plate: 'MH02CD5678', confidence: 0.98, speed: 64, box: { top: 46, left: 36, width: 26, height: 34 }, isEmergency: true }
-      ]
+      detections: []
     }
   ]);
 
   const [webcamActive, setWebcamActive] = useState<boolean>(false);
   const [showOverlays, setShowOverlays] = useState<boolean>(true);
   const webcamVideoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Dynamic animated bounding box tracking loop
+  // Real-time YOLOv8 Computer Vision Inference Loop on Live Video & Webcam Frames
   useEffect(() => {
     if (!isPlaying) return;
-    const interval = setInterval(() => {
-      setLanes((prevLanes) =>
-        prevLanes.map((lane) => ({
-          ...lane,
-          detections: lane.detections.map((det) => {
-            const deltaY = (det.speed / 50.0) * 0.8;
-            let newTop = det.box.top + deltaY;
-            if (newTop > 80) newTop = 20; // Loop vehicles around frame
-            const deltaX = Math.sin(newTop * 0.1) * 0.3;
-            return {
-              ...det,
-              box: {
-                ...det.box,
-                top: newTop,
-                left: Math.max(10, Math.min(75, det.box.left + deltaX))
-              }
-            };
-          })
-        }))
-      );
-    }, 100);
+
+    const interval = setInterval(async () => {
+      const canvas = canvasRef.current || document.createElement('canvas');
+      canvasRef.current = canvas;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      for (const lane of lanes) {
+        const videoEl = (webcamActive && lane.id === 'lane-1') 
+          ? webcamVideoRef.current 
+          : videoRefs.current[lane.id];
+
+        if (videoEl && videoEl.readyState >= 2 && !videoEl.paused) {
+          canvas.width = 320;
+          canvas.height = 180;
+          try {
+            ctx.drawImage(videoEl, 0, 0, 320, 180);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+
+            const res = await fetch('/api/v1/cv/process-frame', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                camera_id: lane.cameraId,
+                image_base64: dataUrl
+              })
+            });
+
+            if (res.ok) {
+              const data = await res.json();
+              setLanes((prevLanes) =>
+                prevLanes.map((l) =>
+                  l.id === lane.id
+                    ? {
+                        ...l,
+                        vehicleCount: data.count || 0,
+                        detections: data.detections || []
+                      }
+                    : l
+                )
+              );
+            }
+          } catch (err) {
+            // Ignore frame capture network errors
+          }
+        }
+      }
+    }, 600);
 
     return () => clearInterval(interval);
-  }, [isPlaying]);
+  }, [isPlaying, lanes, webcamActive]);
 
   // Handle Live Webcam Toggle
   const toggleWebcam = async () => {
