@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Video, Shield, AlertTriangle, Radio, Play, Pause, RotateCcw,
   Zap, Ambulance, Car, Gauge, Eye, CheckCircle2, ChevronRight,
-  Flame, Bell, Activity, Sparkles, Cpu, Clock, Volume2, VolumeX
+  Flame, Bell, Activity, Sparkles, Cpu, Clock, Volume2, VolumeX,
+  Upload, FileVideo, Layers, Target, Compass
 } from 'lucide-react';
-import { Camera, VehicleEvent, Alert } from '../../types';
+import { Camera, Alert } from '../../types';
 import { GlassCard } from '../common/GlassCard';
 import { StatusPill } from '../common/StatusPill';
 
@@ -35,7 +36,7 @@ interface SimulatedLane {
   signal: 'green' | 'yellow' | 'red';
   countdown: number;
   vehicleCount: number;
-  density: number; // 0 - 100%
+  density: number;
   detections: LaneDetection[];
 }
 
@@ -44,6 +45,7 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
   onTriggerAlert,
   onSelectVehicleForTracking
 }) => {
+  const [activeTab, setActiveTab] = useState<'matrix' | 'analyzer'>('matrix');
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [isMuted, setIsMuted] = useState<boolean>(true);
   const [activeGreenLane, setActiveGreenLane] = useState<number>(0);
@@ -52,9 +54,8 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
   const [emergencyLaneId, setEmergencyLaneId] = useState<string | null>(null);
   const [sosAlertActive, setSosAlertActive] = useState<boolean>(false);
   const [playbackRate, setPlaybackRate] = useState<number>(1.0);
-  const [selectedCameraForFocus, setSelectedCameraForFocus] = useState<string | null>(null);
 
-  // Define 4 Primary Surveillance Lanes mapped to real video files (initially empty detections)
+  // 4 Primary Surveillance Lanes mapped to real video files
   const [lanes, setLanes] = useState<SimulatedLane[]>([
     {
       id: 'lane-1',
@@ -106,65 +107,108 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
     }
   ]);
 
+  // Custom Video Analyzer State
+  const [customVideoSrc, setCustomVideoSrc] = useState<string>('/static/videos/cam_01_connaught.mp4');
+  const [customVideoName, setCustomVideoName] = useState<string>('cam_01_connaught.mp4');
+  const [customDetections, setCustomDetections] = useState<LaneDetection[]>([]);
+  const [customVideoPlaying, setCustomVideoPlaying] = useState<boolean>(true);
+  const customVideoRef = useRef<HTMLVideoElement | null>(null);
+
   const [webcamActive, setWebcamActive] = useState<boolean>(false);
   const [showOverlays, setShowOverlays] = useState<boolean>(true);
   const webcamVideoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const videoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({});
 
-  // Real-time YOLOv8 Computer Vision Inference Loop on Live Video & Webcam Frames
+  // Stable references for background inference loop
+  const lanesRef = useRef(lanes);
+  lanesRef.current = lanes;
+  const webcamActiveRef = useRef(webcamActive);
+  webcamActiveRef.current = webcamActive;
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
+
+  // Real-time YOLOv8 Computer Vision Inference Loop (640x360 high-definition frame capture)
   useEffect(() => {
-    if (!isPlaying) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = 640;
+    canvas.height = 360;
+    const ctx = canvas.getContext('2d');
 
     const interval = setInterval(async () => {
-      const canvas = canvasRef.current || document.createElement('canvas');
-      canvasRef.current = canvas;
-      const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
-      for (const lane of lanes) {
-        const videoEl = (webcamActive && lane.id === 'lane-1') 
-          ? webcamVideoRef.current 
-          : videoRefs.current[lane.id];
-
-        if (videoEl && videoEl.readyState >= 2 && !videoEl.paused) {
-          canvas.width = 320;
-          canvas.height = 180;
+      // 1. Process Custom Analyzer Video if active
+      if (activeTabRef.current === 'analyzer' && customVideoRef.current) {
+        const cVideo = customVideoRef.current;
+        if (cVideo.readyState >= 2) {
           try {
-            ctx.drawImage(videoEl, 0, 0, 320, 180);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-
+            ctx.drawImage(cVideo, 0, 0, 640, 360);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
             const res = await fetch('/api/v1/cv/process-frame', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                camera_id: lane.cameraId,
+                camera_id: 'custom-analyzer-cam',
                 image_base64: dataUrl
               })
             });
-
             if (res.ok) {
               const data = await res.json();
-              setLanes((prevLanes) =>
-                prevLanes.map((l) =>
-                  l.id === lane.id
-                    ? {
-                        ...l,
-                        vehicleCount: data.count || 0,
-                        detections: data.detections || []
-                      }
-                    : l
-                )
-              );
+              setCustomDetections(data.detections || []);
             }
-          } catch (err) {
-            // Ignore frame capture network errors
+          } catch (e) {
+            // ignore network frame skip
           }
         }
       }
-    }, 600);
+
+      // 2. Process 4-Lane Matrix Feeds
+      if (isPlayingRef.current) {
+        for (const lane of lanesRef.current) {
+          const videoEl = (webcamActiveRef.current && lane.id === 'lane-1')
+            ? webcamVideoRef.current
+            : videoRefs.current[lane.id];
+
+          if (videoEl && videoEl.readyState >= 2) {
+            try {
+              ctx.drawImage(videoEl, 0, 0, 640, 360);
+              const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+
+              const res = await fetch('/api/v1/cv/process-frame', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  camera_id: lane.cameraId,
+                  image_base64: dataUrl
+                })
+              });
+
+              if (res.ok) {
+                const data = await res.json();
+                setLanes((prevLanes) =>
+                  prevLanes.map((l) =>
+                    l.id === lane.id
+                      ? {
+                          ...l,
+                          vehicleCount: data.count || 0,
+                          detections: data.detections || []
+                        }
+                      : l
+                  )
+                );
+              }
+            } catch (err) {
+              // frame skip
+            }
+          }
+        }
+      }
+    }, 500);
 
     return () => clearInterval(interval);
-  }, [isPlaying, lanes, webcamActive]);
+  }, []);
 
   // Handle Live Webcam Toggle
   const toggleWebcam = async () => {
@@ -189,7 +233,7 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
     }
   };
 
-  // Handle Custom Video File Upload
+  // Handle Custom Video File Upload for a lane
   const handleCustomVideoUpload = (e: React.ChangeEvent<HTMLInputElement>, laneId: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -197,9 +241,50 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
     setLanes((prev) =>
       prev.map((l) => (l.id === laneId ? { ...l, videoSrc: url } : l))
     );
+    setTimeout(() => {
+      const videoEl = videoRefs.current[laneId];
+      if (videoEl) {
+        videoEl.load();
+        videoEl.play().catch(() => {});
+      }
+    }, 150);
   };
 
-  // Update signals whenever activeGreenLane changes (Ensuring Lanezy Core Rule: Only 1 green signal at a time)
+  // Handle Dedicated Video Analyzer File Upload
+  const handleAnalyzerFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setCustomVideoSrc(url);
+    setCustomVideoName(file.name);
+    setCustomDetections([]);
+    setTimeout(() => {
+      if (customVideoRef.current) {
+        customVideoRef.current.load();
+        customVideoRef.current.play().catch(() => {});
+        setCustomVideoPlaying(true);
+      }
+    }, 150);
+  };
+
+  // Signal cycle countdown timer
+  useEffect(() => {
+    if (emergencyActive || !isPlaying) return;
+
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          setActiveGreenLane((curr) => (curr + 1) % 4);
+          return 18;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [emergencyActive, isPlaying]);
+
+  // Update signals whenever activeGreenLane changes
   useEffect(() => {
     if (emergencyActive) return;
 
@@ -212,7 +297,7 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
     );
   }, [activeGreenLane, countdown, emergencyActive]);
 
-  // Handle Emergency Vehicle Override (Lanezy Hallmark)
+  // Handle Emergency Vehicle Override
   const handleEmergencyOverride = (laneId: string) => {
     setEmergencyActive(true);
     setEmergencyLaneId(laneId);
@@ -255,14 +340,12 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
     setTimeout(() => setSosAlertActive(false), 8000);
   };
 
-  // Video Element references for control
-  const videoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({});
-
   const togglePlayPause = () => {
-    setIsPlaying(!isPlaying);
+    const nextState = !isPlaying;
+    setIsPlaying(nextState);
     Object.values(videoRefs.current).forEach((video) => {
       if (video) {
-        if (isPlaying) video.pause();
+        if (!nextState) video.pause();
         else video.play().catch(() => {});
       }
     });
@@ -273,11 +356,12 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
     Object.values(videoRefs.current).forEach((video) => {
       if (video) video.playbackRate = speed;
     });
+    if (customVideoRef.current) customVideoRef.current.playbackRate = speed;
   };
 
   return (
     <div className="space-y-6">
-      {/* Top Banner / Lanezy Live Control Header */}
+      {/* Top Banner / Live Control Header */}
       <div className="bg-gradient-to-r from-[#071324] via-[#091b33] to-[#071324] border border-cyan-500/30 p-4 lg:p-6 rounded-2xl shadow-[0_0_35px_rgba(0,229,255,0.15)] flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
@@ -287,23 +371,49 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
             </span>
             <h2 className="text-xl font-mono font-extrabold text-white tracking-wider flex items-center gap-2">
               <Video className="w-5 h-5 text-cyan-400" />
-              LIVE LANE MONITORING & ANPR SURVEILLANCE
+              LIVE VISION & MULTI-LANE ANPR SURVEILLANCE
             </h2>
             <span className="px-2.5 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-500/40 text-xs font-mono font-bold">
-              MULTI-LANE SYNCHRONOUS FEED
+              YOLOv8 + DUAL-OCR
             </span>
           </div>
           <p className="text-xs font-mono text-slate-300 mt-1 flex items-center gap-2">
-            <span>Adaptive Signal Controller</span>
+            <span>Adaptive Webster Split</span>
             <span className="text-slate-600">•</span>
-            <span>Real-Time YOLOv8 Bounding Boxes</span>
+            <span>Spatial Multi-Object Tracking</span>
             <span className="text-slate-600">•</span>
-            <span className="text-emerald-400 font-bold">Dual-OCR Engine Fusion Enabled</span>
+            <span className="text-emerald-400 font-bold">Real-Time Exterior Color & Plate Fusion</span>
           </p>
         </div>
 
-        {/* Global Action Buttons */}
+        {/* View Mode Tabs & Global Actions */}
         <div className="flex flex-wrap items-center gap-2.5">
+          {/* Mode Switcher */}
+          <div className="flex items-center bg-slate-900 border border-slate-700 rounded-xl p-1 text-xs font-mono">
+            <button
+              onClick={() => setActiveTab('matrix')}
+              className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+                activeTab === 'matrix'
+                  ? 'bg-cyan-500 text-black shadow-[0_0_10px_rgba(0,229,255,0.4)]'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>4-LANE MATRIX</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('analyzer')}
+              className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+                activeTab === 'analyzer'
+                  ? 'bg-cyan-500 text-black shadow-[0_0_10px_rgba(0,229,255,0.4)]'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <FileVideo className="w-3.5 h-3.5" />
+              <span>CUSTOM VIDEO ANALYZER</span>
+            </button>
+          </div>
+
           {/* Play / Pause */}
           <button
             onClick={togglePlayPause}
@@ -369,7 +479,7 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4 text-cyan-400" />}
           </button>
 
-          {/* Emergency SOS Button (Lanezy Feature) */}
+          {/* Emergency SOS Button */}
           <button
             onClick={handleTriggerSOS}
             className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:from-rose-500 hover:to-red-500 text-white text-xs font-mono font-extrabold flex items-center gap-2 shadow-[0_0_20px_rgba(244,63,94,0.4)] animate-pulse"
@@ -413,265 +523,512 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
         </div>
       )}
 
-      {/* Active Signal Logic Summary Card (Lanezy Core Rule) */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <GlassCard className="p-4 flex items-center gap-3 border-cyan-800/40">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
-            <Clock className="w-5 h-5 animate-pulse" />
-          </div>
-          <div>
-            <span className="text-[10px] font-mono text-slate-400 uppercase">Current Green Lane</span>
-            <h4 className="text-sm font-mono font-bold text-emerald-300">
-              {lanes[activeGreenLane]?.name.split(' - ')[0] || 'Lane 1'}
-            </h4>
-            <span className="text-[11px] font-mono text-emerald-400 font-extrabold">
-              {countdown}s remaining
-            </span>
-          </div>
-        </GlassCard>
+      {/* TAB 1: 4-LANE MATRIX VIEW */}
+      {activeTab === 'matrix' && (
+        <div className="space-y-6">
+          {/* Active Signal Logic Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <GlassCard className="p-4 flex items-center gap-3 border-cyan-800/40">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+                <Clock className="w-5 h-5 animate-pulse" />
+              </div>
+              <div>
+                <span className="text-[10px] font-mono text-slate-400 uppercase">Current Green Lane</span>
+                <h4 className="text-sm font-mono font-bold text-emerald-300">
+                  {lanes[activeGreenLane]?.name.split(' - ')[0] || 'Lane 1'}
+                </h4>
+                <span className="text-[11px] font-mono text-emerald-400 font-extrabold">
+                  {countdown}s remaining
+                </span>
+              </div>
+            </GlassCard>
 
-        <GlassCard className="p-4 flex items-center gap-3 border-cyan-800/40">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center border border-blue-500/30">
-            <Car className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-[10px] font-mono text-slate-400 uppercase">Active Intersection Density</span>
-            <h4 className="text-sm font-mono font-bold text-slate-200">
-              {lanes.reduce((acc, l) => acc + l.vehicleCount, 0)} Vehicles Monitored
-            </h4>
-            <span className="text-[11px] font-mono text-cyan-400">
-              Avg Speed: 46.5 km/h
-            </span>
-          </div>
-        </GlassCard>
+            <GlassCard className="p-4 flex items-center gap-3 border-cyan-800/40">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center border border-blue-500/30">
+                <Car className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-mono text-slate-400 uppercase">Monitored Vehicles</span>
+                <h4 className="text-sm font-mono font-bold text-slate-200">
+                  {lanes.reduce((acc, l) => acc + l.vehicleCount, 0)} Active Objects
+                </h4>
+                <span className="text-[11px] font-mono text-cyan-400">
+                  Avg Velocity: 48.2 km/h
+                </span>
+              </div>
+            </GlassCard>
 
-        <GlassCard className="p-4 flex items-center gap-3 border-cyan-800/40">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
-            <Gauge className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-[10px] font-mono text-slate-400 uppercase">Core Traffic Rule</span>
-            <h4 className="text-sm font-mono font-bold text-amber-300">
-              Only 1 Green Signal at a time
-            </h4>
-            <span className="text-[11px] font-mono text-slate-400">
-              Prevents intersection collisions
-            </span>
-          </div>
-        </GlassCard>
+            <GlassCard className="p-4 flex items-center gap-3 border-cyan-800/40">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
+                <Gauge className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-mono text-slate-400 uppercase">Lanezy Rule</span>
+                <h4 className="text-sm font-mono font-bold text-amber-300">
+                  Strict 1-Green Concurrency
+                </h4>
+                <span className="text-[11px] font-mono text-slate-400">
+                  Zero intersection deadlock
+                </span>
+              </div>
+            </GlassCard>
 
-        <GlassCard className="p-4 flex items-center gap-3 border-cyan-800/40">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center border border-purple-500/30">
-            <Cpu className="w-5 h-5" />
+            <GlassCard className="p-4 flex items-center gap-3 border-cyan-800/40">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center border border-purple-500/30">
+                <Cpu className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-mono text-slate-400 uppercase">Spatial Tracker</span>
+                <h4 className="text-sm font-mono font-bold text-purple-300">
+                  IoU + Centroid Tracking
+                </h4>
+                <span className="text-[11px] font-mono text-slate-400">
+                  Stable ID persistence
+                </span>
+              </div>
+            </GlassCard>
           </div>
-          <div>
-            <span className="text-[10px] font-mono text-slate-400 uppercase">Optimization Logic</span>
-            <h4 className="text-sm font-mono font-bold text-purple-300">
-              Webster Adaptive Split
-            </h4>
-            <span className="text-[11px] font-mono text-slate-400">
-              Allocates green time by density
-            </span>
-          </div>
-        </GlassCard>
-      </div>
 
-      {/* 4-Lane / Multi-Camera Video Surveillance Matrix */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {lanes.map((lane, index) => {
-          const isGreen = lane.signal === 'green';
-          const isYellow = lane.signal === 'yellow';
-          const isRed = lane.signal === 'red';
+          {/* 4-Lane Video Surveillance Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {lanes.map((lane) => {
+              const isGreen = lane.signal === 'green';
+              const isYellow = lane.signal === 'yellow';
+              const isRed = lane.signal === 'red';
 
-          return (
-            <GlassCard
-              key={lane.id}
-              glow={isGreen ? 'green' : isYellow ? 'amber' : 'red'}
-              className="p-5 space-y-4 relative overflow-hidden transition-all"
-            >
-              {/* Lane Header with Traffic Signal Indicator */}
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-extrabold text-sm text-white">
-                      {lane.name}
-                    </span>
-                    <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-[10px] font-mono text-slate-400">
-                      ID: {lane.cameraId}
-                    </span>
+              return (
+                <GlassCard
+                  key={lane.id}
+                  glow={isGreen ? 'green' : isYellow ? 'amber' : 'red'}
+                  className="p-5 space-y-4 relative overflow-hidden transition-all"
+                >
+                  {/* Lane Header with Traffic Signal Indicator */}
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-extrabold text-sm text-white">
+                          {lane.name}
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-[10px] font-mono text-slate-400">
+                          ID: {lane.cameraId}
+                        </span>
+                      </div>
+                      <p className="text-[11px] font-mono text-slate-400 mt-0.5">
+                        Direction: <span className="text-cyan-400 font-bold">{lane.direction}</span> • Density: {lane.density}% ({lane.vehicleCount} veh)
+                      </p>
+                    </div>
+
+                    {/* Tactical 3-Light Traffic Signal Display */}
+                    <div className="flex items-center gap-2 bg-[#040914] px-3 py-1.5 rounded-xl border border-slate-800">
+                      {/* Red Light */}
+                      <div
+                        className={`w-3.5 h-3.5 rounded-full transition-all ${
+                          isRed
+                            ? 'bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.9)] scale-110 animate-pulse'
+                            : 'bg-rose-950 opacity-40'
+                        }`}
+                      />
+                      {/* Yellow Light */}
+                      <div
+                        className={`w-3.5 h-3.5 rounded-full transition-all ${
+                          isYellow
+                            ? 'bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.9)] scale-110 animate-pulse'
+                            : 'bg-amber-950 opacity-40'
+                        }`}
+                      />
+                      {/* Green Light */}
+                      <div
+                        className={`w-3.5 h-3.5 rounded-full transition-all ${
+                          isGreen
+                            ? 'bg-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.9)] scale-110 animate-pulse'
+                            : 'bg-emerald-950 opacity-40'
+                        }`}
+                      />
+                      {/* Countdown Badge */}
+                      <span
+                        className={`ml-1.5 font-mono font-bold text-xs px-2 py-0.5 rounded ${
+                          isGreen
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                            : 'bg-slate-800 text-slate-500'
+                        }`}
+                      >
+                        {isGreen ? `${lane.countdown}s` : 'WAIT'}
+                      </span>
+                    </div>
                   </div>
-                  <p className="text-[11px] font-mono text-slate-400 mt-0.5">
-                    Direction: <span className="text-cyan-400 font-bold">{lane.direction}</span> • Density: {lane.density}% ({lane.vehicleCount} veh)
-                  </p>
-                </div>
 
-                {/* Tactical 3-Light Traffic Signal Display */}
-                <div className="flex items-center gap-2 bg-[#040914] px-3 py-1.5 rounded-xl border border-slate-800">
-                  {/* Red Light */}
-                  <div
-                    className={`w-3.5 h-3.5 rounded-full transition-all ${
-                      isRed
-                        ? 'bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.9)] scale-110 animate-pulse'
-                        : 'bg-rose-950 opacity-40'
-                    }`}
-                  />
-                  {/* Yellow Light */}
-                  <div
-                    className={`w-3.5 h-3.5 rounded-full transition-all ${
-                      isYellow
-                        ? 'bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.9)] scale-110 animate-pulse'
-                        : 'bg-amber-950 opacity-40'
-                    }`}
-                  />
-                  {/* Green Light */}
-                  <div
-                    className={`w-3.5 h-3.5 rounded-full transition-all ${
-                      isGreen
-                        ? 'bg-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.9)] scale-110 animate-pulse'
-                        : 'bg-emerald-950 opacity-40'
-                    }`}
-                  />
-                  {/* Countdown Badge */}
-                  <span
-                    className={`ml-1.5 font-mono font-bold text-xs px-2 py-0.5 rounded ${
-                      isGreen
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                        : 'bg-slate-800 text-slate-500'
-                    }`}
-                  >
-                    {isGreen ? `${lane.countdown}s` : 'WAIT'}
-                  </span>
-                </div>
+                  {/* Video Player Container with AI Bounding Box Overlays */}
+                  <div className="relative rounded-xl overflow-hidden bg-black border border-slate-800 aspect-video flex items-center justify-center group">
+                    {webcamActive && lane.id === 'lane-1' ? (
+                      <video
+                        ref={webcamVideoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <video
+                        ref={(el) => {
+                          videoRefs.current[lane.id] = el;
+                        }}
+                        src={lane.videoSrc}
+                        autoPlay
+                        loop
+                        muted={isMuted}
+                        playsInline
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+
+                    {/* Live Tactical HUD Overlay */}
+                    <div className="absolute top-2 left-2 z-20 flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded bg-black/80 border border-cyan-500/40 text-[10px] font-mono text-cyan-300 flex items-center gap-1.5 backdrop-blur-md">
+                        <Radio className="w-3 h-3 text-cyan-400 animate-pulse" />
+                        {webcamActive && lane.id === 'lane-1' ? 'WEBCAM 1080p' : 'LIVE 1080p'}
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-black/80 border border-slate-700 text-[10px] font-mono text-emerald-400 font-bold backdrop-blur-md">
+                        25.0 FPS
+                      </span>
+                    </div>
+
+                    <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5">
+                      <label className="cursor-pointer px-2 py-0.5 rounded bg-black/80 border border-slate-700 hover:border-cyan-500 text-[9px] font-mono text-slate-300 hover:text-cyan-300 backdrop-blur-md transition-all">
+                        <input
+                          type="file"
+                          accept="video/*,image/*"
+                          className="hidden"
+                          onChange={(e) => handleCustomVideoUpload(e, lane.id)}
+                        />
+                        📂 UPLOAD FEED
+                      </label>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border backdrop-blur-md ${
+                          isGreen
+                            ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/50'
+                            : 'bg-rose-950/90 text-rose-300 border-rose-500/50'
+                        }`}
+                      >
+                        {isGreen ? 'PROCEED (GREEN)' : 'STOP (RED)'}
+                      </span>
+                    </div>
+
+                    {/* Real-Time Bounding Boxes and Floating Plate Tags */}
+                    {showOverlays && lane.detections.map((det) => (
+                      <div
+                        key={det.id}
+                        style={{
+                          top: `${det.box.top}%`,
+                          left: `${det.box.left}%`,
+                          width: `${det.box.width}%`,
+                          height: `${det.box.height}%`
+                        }}
+                        className={`absolute z-10 border-2 rounded pointer-events-none transition-all duration-300 ${
+                          det.isEmergency
+                            ? 'border-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.8)]'
+                            : det.isBlacklisted
+                            ? 'border-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.8)]'
+                            : 'border-cyan-400 shadow-[0_0_10px_rgba(0,229,255,0.4)]'
+                        }`}
+                      >
+                        {/* Floating License Plate Tag */}
+                        <div className="absolute -top-7 left-0 pointer-events-auto">
+                          <div
+                            onClick={() => det.plate && onSelectVehicleForTracking && onSelectVehicleForTracking(det.plate)}
+                            title={det.plate ? "Click to reconstruct trajectory" : `${det.vehicleType} detected`}
+                            className={`cursor-pointer px-2 py-0.5 rounded font-mono font-extrabold text-[10px] flex items-center gap-1 shadow-lg backdrop-blur-md whitespace-nowrap border ${
+                              det.isEmergency
+                                ? 'bg-emerald-950/95 text-emerald-200 border-emerald-400'
+                                : det.isBlacklisted
+                                ? 'bg-rose-950/95 text-rose-200 border-rose-500 animate-pulse'
+                                : 'bg-slate-950/90 text-cyan-200 border-cyan-500/50'
+                            }`}
+                          >
+                            {det.isEmergency && <span>🚑 EMERGENCY</span>}
+                            {det.isBlacklisted && <span className="text-rose-400 font-bold">⚠️ WANTED</span>}
+                            <span>
+                              {det.vehicleType === 'car' ? '🚗' : det.vehicleType === 'truck' ? '🚛' : det.vehicleType === 'bus' ? '🚌' : det.vehicleType === 'motorbike' ? '🏍️' : det.vehicleType === 'person' ? '🚶' : '🚘'} {det.vehicleType.toUpperCase()}
+                            </span>
+                            {det.color && <span className="text-slate-300">[{det.color}]</span>}
+                            {det.plate && det.plate !== 'SCANNING...' && <span className="text-emerald-300 font-bold">• {det.plate}</span>}
+                            <span className="text-[9px] text-slate-400">({Math.round(det.confidence * 100)}%)</span>
+                          </div>
+                        </div>
+
+                        {/* Speed Tag at bottom of bounding box */}
+                        <div className="absolute -bottom-5 right-0">
+                          <span className="px-1.5 py-0.2 rounded bg-black/80 font-mono text-[9px] text-slate-300 border border-slate-700">
+                            {det.speed} km/h
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Bottom Video HUD Strip */}
+                    <div className="absolute bottom-2 inset-x-2 z-20 flex items-center justify-between bg-black/75 px-3 py-1.5 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-300 backdrop-blur-md">
+                      <span>Spatial Tracks: {lane.detections.length} Objects</span>
+                      <span className="text-cyan-300">Dual-OCR: Paddle + EasyOCR</span>
+                    </div>
+                  </div>
+
+                  {/* Lane Actions / Emergency Override Button */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      onClick={() => handleEmergencyOverride(lane.id)}
+                      className={`flex-1 py-2 rounded-xl font-mono font-bold text-xs flex items-center justify-center gap-1.5 transition-all border ${
+                        emergencyLaneId === lane.id
+                          ? 'bg-emerald-500 text-black border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.4)]'
+                          : 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border-rose-500/40 hover:border-rose-400'
+                      }`}
+                    >
+                      <Ambulance className="w-4 h-4" />
+                      <span>OVERRIDE FOR EMERGENCY VEHICLE</span>
+                    </button>
+                  </div>
+                </GlassCard>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: DEDICATED CUSTOM VIDEO & AI VISION ANALYZER */}
+      {activeTab === 'analyzer' && (
+        <div className="space-y-6">
+          <GlassCard className="p-6 space-y-6 border-cyan-500/40 shadow-[0_0_30px_rgba(0,229,255,0.1)]">
+            {/* Header & Upload Controls */}
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+              <div>
+                <h3 className="font-mono font-extrabold text-base text-white flex items-center gap-2">
+                  <FileVideo className="w-5 h-5 text-cyan-400" />
+                  CUSTOM VIDEO & IMAGE ANPR INTELLIGENCE LAB
+                </h3>
+                <p className="text-xs font-mono text-slate-400 mt-1">
+                  Upload any MP4, AVI, WebM traffic video or snapshot image to run live YOLOv8 multi-class detection, color extraction, and Dual-OCR plate recognition.
+                </p>
               </div>
 
-              {/* Video Player Container with AI Bounding Box Overlays */}
-              <div className="relative rounded-xl overflow-hidden bg-black border border-slate-800 aspect-video flex items-center justify-center group">
-                {webcamActive && lane.id === 'lane-1' ? (
-                  <video
-                    ref={webcamVideoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-full object-cover"
+              {/* Upload & Quick Demo Clips */}
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="cursor-pointer px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-bold text-xs flex items-center gap-2 shadow-[0_0_15px_rgba(0,229,255,0.4)] transition-all">
+                  <Upload className="w-4 h-4" />
+                  <span>UPLOAD YOUR VIDEO / IMAGE</span>
+                  <input
+                    type="file"
+                    accept="video/*,image/*"
+                    className="hidden"
+                    onChange={handleAnalyzerFileUpload}
                   />
-                ) : (
-                  <video
-                    ref={(el) => {
-                      videoRefs.current[lane.id] = el;
+                </label>
+
+                {/* Preset test clips */}
+                <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-700 rounded-xl p-1 text-xs font-mono">
+                  <span className="text-[10px] text-slate-400 px-2">Presets:</span>
+                  <button
+                    onClick={() => {
+                      setCustomVideoSrc('/static/videos/cam_01_connaught.mp4');
+                      setCustomVideoName('cam_01_connaught.mp4');
                     }}
-                    src={lane.videoSrc}
+                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px]"
+                  >
+                    Bus & Crowd
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCustomVideoSrc('/static/videos/cam_02_indiagate.mp4');
+                      setCustomVideoName('cam_02_indiagate.mp4');
+                    }}
+                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px]"
+                  >
+                    Street Traffic
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Video Player & Live Bounding Boxes */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-3">
+                <div className="relative rounded-2xl overflow-hidden bg-black border border-cyan-500/30 aspect-video flex items-center justify-center shadow-2xl">
+                  <video
+                    ref={customVideoRef}
+                    src={customVideoSrc}
                     autoPlay
                     loop
                     muted={isMuted}
                     playsInline
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
-                )}
 
-                {/* Live Tactical HUD Overlay */}
-                <div className="absolute top-2 left-2 z-20 flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded bg-black/80 border border-cyan-500/40 text-[10px] font-mono text-cyan-300 flex items-center gap-1.5 backdrop-blur-md">
-                    <Radio className="w-3 h-3 text-cyan-400 animate-pulse" />
-                    {webcamActive && lane.id === 'lane-1' ? 'WEBCAM 1080p' : 'LIVE 1080p'}
-                  </span>
-                  <span className="px-2 py-0.5 rounded bg-black/80 border border-slate-700 text-[10px] font-mono text-emerald-400 font-bold backdrop-blur-md">
-                    25.0 FPS
-                  </span>
-                </div>
+                  {/* Top HUD */}
+                  <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
+                    <span className="px-2.5 py-1 rounded-lg bg-black/80 border border-cyan-500/50 text-xs font-mono text-cyan-300 flex items-center gap-1.5 backdrop-blur-md">
+                      <Target className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                      <span>{customVideoName}</span>
+                    </span>
+                    <span className="px-2.5 py-1 rounded-lg bg-emerald-950/80 border border-emerald-500/50 text-xs font-mono text-emerald-300 font-bold backdrop-blur-md">
+                      {customDetections.length} DETECTIONS
+                    </span>
+                  </div>
 
-                <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5">
-                  <label className="cursor-pointer px-2 py-0.5 rounded bg-black/80 border border-slate-700 hover:border-cyan-500 text-[9px] font-mono text-slate-300 hover:text-cyan-300 backdrop-blur-md transition-all">
-                    <input
-                      type="file"
-                      accept="video/*"
-                      className="hidden"
-                      onChange={(e) => handleCustomVideoUpload(e, lane.id)}
-                    />
-                    📂 UPLOAD VIDEO
-                  </label>
-                  <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border backdrop-blur-md ${
-                      isGreen
-                        ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/50'
-                        : 'bg-rose-950/90 text-rose-300 border-rose-500/50'
-                    }`}
-                  >
-                    {isGreen ? 'PROCEED (GREEN)' : 'STOP (RED)'}
-                  </span>
-                </div>
+                  {/* Real-Time Bounding Boxes */}
+                  {customDetections.map((det) => (
+                    <div
+                      key={det.id}
+                      style={{
+                        top: `${det.box.top}%`,
+                        left: `${det.box.left}%`,
+                        width: `${det.box.width}%`,
+                        height: `${det.box.height}%`
+                      }}
+                      className={`absolute z-10 border-2 rounded pointer-events-none transition-all duration-200 ${
+                        det.isEmergency
+                          ? 'border-emerald-400 shadow-[0_0_20px_rgba(52,211,153,0.9)]'
+                          : det.isBlacklisted
+                          ? 'border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.9)]'
+                          : 'border-cyan-400 shadow-[0_0_15px_rgba(0,229,255,0.5)]'
+                      }`}
+                    >
+                      {/* Floating Plate Tag */}
+                      <div className="absolute -top-8 left-0 pointer-events-auto">
+                        <div
+                          onClick={() => det.plate && onSelectVehicleForTracking && onSelectVehicleForTracking(det.plate)}
+                          className={`cursor-pointer px-2.5 py-0.5 rounded-lg font-mono font-extrabold text-[11px] flex items-center gap-1.5 shadow-xl backdrop-blur-md whitespace-nowrap border ${
+                            det.isEmergency
+                              ? 'bg-emerald-950 text-emerald-200 border-emerald-400'
+                              : det.isBlacklisted
+                              ? 'bg-rose-950 text-rose-200 border-rose-500 animate-pulse'
+                              : 'bg-slate-950/95 text-cyan-200 border-cyan-400'
+                          }`}
+                        >
+                          {det.isEmergency && <span>🚑 EMERGENCY</span>}
+                          {det.isBlacklisted && <span className="text-rose-400 font-bold">⚠️ WANTED</span>}
+                          <span>
+                            {det.vehicleType === 'car' ? '🚗' : det.vehicleType === 'truck' ? '🚛' : det.vehicleType === 'bus' ? '🚌' : det.vehicleType === 'motorbike' ? '🏍️' : det.vehicleType === 'person' ? '🚶' : '🚘'} {det.vehicleType.toUpperCase()}
+                          </span>
+                          {det.color && <span className="text-slate-300">[{det.color}]</span>}
+                          {det.plate && det.plate !== 'SCANNING...' && <span className="text-emerald-300 font-bold">• {det.plate}</span>}
+                          <span className="text-[10px] text-slate-400">({Math.round(det.confidence * 100)}%)</span>
+                        </div>
+                      </div>
 
-                {/* Real-Time Bounding Boxes and Floating Plate Tags */}
-                {showOverlays && lane.detections.map((det) => (
-                  <div
-                    key={det.id}
-                    style={{
-                      top: `${det.box.top}%`,
-                      left: `${det.box.left}%`,
-                      width: `${det.box.width}%`,
-                      height: `${det.box.height}%`
-                    }}
-                    className={`absolute z-10 border-2 rounded pointer-events-none transition-all ${
-                      det.isEmergency
-                        ? 'border-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.8)]'
-                        : det.isBlacklisted
-                        ? 'border-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.8)]'
-                        : 'border-cyan-400 shadow-[0_0_10px_rgba(0,229,255,0.4)]'
-                    }`}
-                  >
-                    {/* Floating License Plate Tag */}
-                    <div className="absolute -top-7 left-0 pointer-events-auto">
-                      <div
-                        onClick={() => onSelectVehicleForTracking && onSelectVehicleForTracking(det.plate)}
-                        title="Click to reconstruct trajectory"
-                        className={`cursor-pointer px-2 py-0.5 rounded font-mono font-extrabold text-[10px] flex items-center gap-1 shadow-lg backdrop-blur-md whitespace-nowrap border ${
-                          det.isEmergency
-                            ? 'bg-emerald-950/95 text-emerald-200 border-emerald-400'
-                            : det.isBlacklisted
-                            ? 'bg-rose-950/95 text-rose-200 border-rose-500 animate-pulse'
-                            : 'bg-slate-950/90 text-cyan-200 border-cyan-500/50'
-                        }`}
-                      >
-                        {det.isEmergency && <span>🚑</span>}
-                        {det.isBlacklisted && <span className="text-rose-400 font-bold">⚠️ WANTED:</span>}
-                        <span>{det.plate}</span>
-                        <span className="text-[9px] text-slate-400">({Math.round(det.confidence * 100)}%)</span>
+                      {/* Speed Tag */}
+                      <div className="absolute -bottom-6 right-0">
+                        <span className="px-2 py-0.5 rounded bg-black/80 font-mono text-[10px] text-slate-300 border border-slate-700">
+                          {det.speed} km/h
+                        </span>
                       </div>
                     </div>
+                  ))}
+                </div>
 
-                    {/* Speed Tag at bottom of bounding box */}
-                    <div className="absolute -bottom-5 right-0">
-                      <span className="px-1.5 py-0.2 rounded bg-black/80 font-mono text-[9px] text-slate-300 border border-slate-700">
-                        {det.speed} km/h
-                      </span>
-                    </div>
+                {/* Playback Controls */}
+                <div className="flex items-center justify-between bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => {
+                        if (customVideoRef.current) {
+                          if (customVideoPlaying) {
+                            customVideoRef.current.pause();
+                            setCustomVideoPlaying(false);
+                          } else {
+                            customVideoRef.current.play();
+                            setCustomVideoPlaying(true);
+                          }
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-bold text-xs flex items-center gap-1.5"
+                    >
+                      {customVideoPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                      <span>{customVideoPlaying ? 'PAUSE' : 'PLAY'}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (customVideoRef.current) {
+                          customVideoRef.current.currentTime = 0;
+                          customVideoRef.current.play();
+                          setCustomVideoPlaying(true);
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono font-bold text-xs flex items-center gap-1.5 border border-slate-700"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>REPLAY</span>
+                    </button>
                   </div>
-                ))}
-
-                {/* Bottom Video HUD Strip */}
-                <div className="absolute bottom-2 inset-x-2 z-20 flex items-center justify-between bg-black/75 px-3 py-1.5 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-300 backdrop-blur-md">
-                  <span>YOLOv8 ByteTrack: {lane.detections.length} Active Tracks</span>
-                  <span className="text-cyan-300">Dual-OCR: Paddle + EasyOCR</span>
+                  <div className="text-xs font-mono text-slate-400 flex items-center gap-3">
+                    <span>Active Video: <span className="text-cyan-300 font-bold">{customVideoName}</span></span>
+                    <span>Tracking: <span className="text-emerald-400 font-bold">Enabled</span></span>
+                  </div>
                 </div>
               </div>
 
-              {/* Lane Actions / Emergency Override Button */}
-              <div className="flex items-center gap-2 pt-1">
-                <button
-                  onClick={() => handleEmergencyOverride(lane.id)}
-                  className={`flex-1 py-2 rounded-xl font-mono font-bold text-xs flex items-center justify-center gap-1.5 transition-all border ${
-                    emergencyLaneId === lane.id
-                      ? 'bg-emerald-500 text-black border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.4)]'
-                      : 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border-rose-500/40 hover:border-rose-400'
-                  }`}
-                >
-                  <Ambulance className="w-4 h-4" />
-                  <span>OVERRIDE FOR EMERGENCY VEHICLE</span>
-                </button>
+              {/* Detections Intelligence Breakdown Table */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-mono font-bold text-xs text-white uppercase flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-cyan-400" />
+                    LIVE OBJECTS IN FRAME ({customDetections.length})
+                  </h4>
+                  <span className="text-[10px] font-mono text-emerald-400">REAL-TIME SYNC</span>
+                </div>
+
+                {customDetections.length === 0 ? (
+                  <div className="p-8 text-center rounded-xl bg-slate-900/50 border border-slate-800 font-mono text-xs text-slate-500">
+                    No objects detected in current frame. Point camera at vehicles or road traffic.
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                    {customDetections.map((d) => (
+                      <div
+                        key={d.id}
+                        className="bg-[#060e1c] p-3 rounded-xl border border-cyan-900/40 hover:border-cyan-500/50 transition-all space-y-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">
+                              {d.vehicleType === 'car' ? '🚗' : d.vehicleType === 'truck' ? '🚛' : d.vehicleType === 'bus' ? '🚌' : d.vehicleType === 'motorbike' ? '🏍️' : d.vehicleType === 'person' ? '🚶' : '🚘'}
+                            </span>
+                            <span className="font-mono font-extrabold text-xs text-white uppercase">
+                              {d.vehicleType}
+                            </span>
+                            <span className="px-1.5 py-0.2 rounded bg-slate-900 text-[10px] font-mono text-slate-300 border border-slate-700">
+                              {d.color}
+                            </span>
+                          </div>
+                          <span className="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 font-mono text-[10px] font-bold border border-cyan-800">
+                            {Math.round(d.confidence * 100)}%
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs font-mono">
+                          <span className="text-slate-400">License Plate:</span>
+                          <span className="font-bold text-emerald-300">{d.plate}</span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs font-mono">
+                          <span className="text-slate-400">Estimated Speed:</span>
+                          <span className="text-slate-200">{d.speed} km/h</span>
+                        </div>
+
+                        {d.plate && d.plate !== 'SCANNING...' && onSelectVehicleForTracking && (
+                          <button
+                            onClick={() => onSelectVehicleForTracking(d.plate)}
+                            className="w-full mt-1 py-1.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 text-[11px] font-mono font-bold flex items-center justify-center gap-1.5 transition-all"
+                          >
+                            <Compass className="w-3.5 h-3.5" />
+                            <span>RECONSTRUCT TRAJECTORY</span>
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            </GlassCard>
-          );
-        })}
-      </div>
+            </div>
+          </GlassCard>
+        </div>
+      )}
     </div>
   );
 };

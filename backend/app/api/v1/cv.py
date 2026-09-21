@@ -18,6 +18,8 @@ from ...cv_pipeline.plate_ocr import fuse_ocr_scores, normalize_plate_text, vali
 
 router = APIRouter(prefix="/cv", tags=["Live Computer Vision Pipeline"])
 
+HOTLIST_PLATES = {"DL01AB1234", "HR26DQ5551", "MH02CD5678", "UP16CD8821", "DL08CX9920"}
+
 class FrameProcessRequest(BaseModel):
     camera_id: str = "cam-01"
     image_base64: str # Base64 encoded JPEG/PNG frame from browser video/webcam
@@ -61,18 +63,16 @@ def process_live_frame(payload: FrameProcessRequest) -> Dict[str, Any]:
             speed = det.get("speed_estimate", 45.0)
 
             # OCR on Plate Crop if available
-            plate_text = ""
+            plate_text = det.get("plate_number", "")
             conf = det.get("confidence", 0.90)
             
-            if "plate_crop_bbox" in det:
+            if not plate_text and "plate_crop_bbox" in det and det["plate_crop_bbox"]:
                 px1, py1, px2, py2 = [int(c) for c in det["plate_crop_bbox"]]
-                # Ensure crop within frame bounds
                 px1, py1 = max(0, px1), max(0, py1)
                 px2, py2 = min(w, px2), min(h, py2)
                 
                 if px2 > px1 and py2 > py1:
                     plate_crop = frame[py1:py2, px1:px2]
-                    # Run OCR
                     easy_res = ocr_engine.run_single_engine(plate_crop) if ocr_engine else {"text": "", "confidence": 0.0}
                     paddle_res = paddle_engine.run(plate_crop) if paddle_engine else {"text": "", "confidence": 0.0}
                     fused = fuse_ocr_scores(paddle_res.get("text", ""), paddle_res.get("confidence", 0.0),
@@ -81,14 +81,12 @@ def process_live_frame(payload: FrameProcessRequest) -> Dict[str, Any]:
                     if fused.get("confidence"):
                         conf = fused.get("confidence")
 
-            if not plate_text:
-                plate_text = det.get("plate_number", "")
-
-            # Identify if emergency vehicle
+            # Check if vehicle matches emergency or blacklist
             is_emergency = v_type.lower() in ["ambulance", "fire truck", "police"]
+            is_blacklisted = normalize_plate_text(plate_text) in HOTLIST_PLATES if plate_text else False
             
             detections.append({
-                "id": f"det_{det.get('track_id', np.random.randint(1000, 9999))}",
+                "id": f"det_{det.get('track_id', 100)}",
                 "vehicleType": v_type,
                 "color": color,
                 "plate": plate_text or "SCANNING...",
@@ -101,7 +99,7 @@ def process_live_frame(payload: FrameProcessRequest) -> Dict[str, Any]:
                     "height": round(height_pct, 2)
                 },
                 "isEmergency": is_emergency,
-                "isBlacklisted": False
+                "isBlacklisted": is_blacklisted
             })
 
         return {
