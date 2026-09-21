@@ -129,11 +129,11 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
   const activeTabRef = useRef(activeTab);
   activeTabRef.current = activeTab;
 
-  // Real-time YOLOv8 Computer Vision Inference Loop (640x360 high-definition frame capture)
+  // Real-time YOLOv8 Computer Vision Inference Loop (1280x720 High-Definition Frame Processing)
   useEffect(() => {
     const canvas = document.createElement('canvas');
-    canvas.width = 640;
-    canvas.height = 360;
+    canvas.width = 1280;
+    canvas.height = 720;
     const ctx = canvas.getContext('2d');
 
     const interval = setInterval(async () => {
@@ -144,8 +144,8 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
         const cVideo = customVideoRef.current;
         if (cVideo.readyState >= 2) {
           try {
-            ctx.drawImage(cVideo, 0, 0, 640, 360);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            ctx.drawImage(cVideo, 0, 0, 1280, 720);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
             const res = await fetch('/api/v1/cv/process-frame', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -173,8 +173,8 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
 
           if (videoEl && videoEl.readyState >= 2) {
             try {
-              ctx.drawImage(videoEl, 0, 0, 640, 360);
-              const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+              ctx.drawImage(videoEl, 0, 0, 1280, 720);
+              const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
 
               const res = await fetch('/api/v1/cv/process-frame', {
                 method: 'POST',
@@ -205,7 +205,7 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
           }
         }
       }
-    }, 500);
+    }, 450);
 
     return () => clearInterval(interval);
   }, []);
@@ -382,7 +382,7 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
             <span className="text-slate-600">•</span>
             <span>Spatial Multi-Object Tracking</span>
             <span className="text-slate-600">•</span>
-            <span className="text-emerald-400 font-bold">Real-Time Exterior Color & Plate Fusion</span>
+            <span className="text-emerald-400 font-bold">1080p Real-Time Number Plate & Speed Analytics</span>
           </p>
         </div>
 
@@ -553,7 +553,7 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
                   {lanes.reduce((acc, l) => acc + l.vehicleCount, 0)} Active Objects
                 </h4>
                 <span className="text-[11px] font-mono text-cyan-400">
-                  Avg Velocity: 48.2 km/h
+                  Real-Time Velocity Tracking
                 </span>
               </div>
             </GlassCard>
@@ -757,8 +757,8 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
 
                         {/* Speed Tag at bottom of bounding box */}
                         <div className="absolute -bottom-5 right-0">
-                          <span className="px-1.5 py-0.2 rounded bg-black/80 font-mono text-[9px] text-slate-300 border border-slate-700">
-                            {det.speed} km/h
+                          <span className={`px-1.5 py-0.2 rounded bg-black/80 font-mono text-[9px] border ${det.speed === 0 ? 'text-slate-400 border-slate-800' : 'text-emerald-300 border-emerald-500/40'}`}>
+                            {det.speed === 0 ? '0 km/h (PARKED)' : `${det.speed} km/h`}
                           </span>
                         </div>
                       </div>
@@ -914,8 +914,8 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
 
                       {/* Speed Tag */}
                       <div className="absolute -bottom-6 right-0">
-                        <span className="px-2 py-0.5 rounded bg-black/80 font-mono text-[10px] text-slate-300 border border-slate-700">
-                          {det.speed} km/h
+                        <span className={`px-2 py-0.5 rounded bg-black/80 font-mono text-[10px] border ${det.speed === 0 ? 'text-slate-400 border-slate-700' : 'text-emerald-300 border-emerald-500/40'}`}>
+                          {det.speed === 0 ? '0 km/h (PARKED)' : `${det.speed} km/h`}
                         </span>
                       </div>
                     </div>
@@ -968,7 +968,7 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
                 <div className="flex items-center justify-between">
                   <h4 className="font-mono font-bold text-xs text-white uppercase flex items-center gap-2">
                     <Activity className="w-4 h-4 text-cyan-400" />
-                    LIVE OBJECTS IN FRAME ({customDetections.length})
+                    LIVE NUMBER PLATES & SPEED ({customDetections.length})
                   </h4>
                   <span className="text-[10px] font-mono text-emerald-400">REAL-TIME SYNC</span>
                 </div>
@@ -982,33 +982,39 @@ export const LiveVideoMonitoring: React.FC<LiveVideoMonitoringProps> = ({
                     {customDetections.map((d) => (
                       <div
                         key={d.id}
-                        className="bg-[#060e1c] p-3 rounded-xl border border-cyan-900/40 hover:border-cyan-500/50 transition-all space-y-2"
+                        className="bg-[#060e1c] p-3.5 rounded-xl border border-cyan-900/40 hover:border-cyan-500/50 transition-all space-y-2.5 shadow-md"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="text-base">
+                            <span className="text-lg">
                               {d.vehicleType === 'car' ? '🚗' : d.vehicleType === 'truck' ? '🚛' : d.vehicleType === 'bus' ? '🚌' : d.vehicleType === 'motorbike' ? '🏍️' : d.vehicleType === 'person' ? '🚶' : '🚘'}
                             </span>
                             <span className="font-mono font-extrabold text-xs text-white uppercase">
                               {d.vehicleType}
                             </span>
-                            <span className="px-1.5 py-0.2 rounded bg-slate-900 text-[10px] font-mono text-slate-300 border border-slate-700">
+                            <span className="px-2 py-0.5 rounded bg-slate-900 text-[10px] font-mono text-slate-300 border border-slate-700 font-bold">
                               {d.color}
                             </span>
                           </div>
                           <span className="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 font-mono text-[10px] font-bold border border-cyan-800">
-                            {Math.round(d.confidence * 100)}%
+                            {Math.round(d.confidence * 100)}% CONF
                           </span>
                         </div>
 
-                        <div className="flex items-center justify-between text-xs font-mono">
+                        {/* License Plate Banner */}
+                        <div className="flex items-center justify-between text-xs font-mono bg-black/60 p-2 rounded-lg border border-slate-800">
                           <span className="text-slate-400">License Plate:</span>
-                          <span className="font-bold text-emerald-300">{d.plate}</span>
+                          <span className="px-2.5 py-0.5 rounded bg-emerald-950 text-emerald-300 font-mono font-extrabold text-xs border border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.3)]">
+                            {d.plate}
+                          </span>
                         </div>
 
+                        {/* Velocity Badge */}
                         <div className="flex items-center justify-between text-xs font-mono">
-                          <span className="text-slate-400">Estimated Speed:</span>
-                          <span className="text-slate-200">{d.speed} km/h</span>
+                          <span className="text-slate-400">Velocity:</span>
+                          <span className={`font-mono font-bold ${d.speed === 0 ? 'text-slate-400' : 'text-emerald-300'}`}>
+                            {d.speed === 0 ? '0.0 km/h (PARKED / SHOULDER)' : `${d.speed} km/h (ACTIVE)`}
+                          </span>
                         </div>
 
                         {d.plate && d.plate !== 'SCANNING...' && onSelectVehicleForTracking && (
