@@ -6,14 +6,14 @@ import cv2
 from ultralytics import YOLO
 
 # --- Config -----------------------------------------------------------
-DEFAULT_PLATE_MODEL = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "models", "best.pt")
+DEFAULT_PLATE_MODEL = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "models", "license_plate_yolov8.pt")
 if not os.path.exists(DEFAULT_PLATE_MODEL):
-    DEFAULT_PLATE_MODEL = "models/best.pt"
+    DEFAULT_PLATE_MODEL = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "models", "best.pt")
 PLATE_MODEL_PATH = os.getenv("PLATE_MODEL_PATH", DEFAULT_PLATE_MODEL)
 
 VEHICLE_MODEL_PATH = os.getenv("VEHICLE_MODEL_PATH", "")
 
-PLATE_CONF_THRESHOLD = float(os.getenv("PLATE_CONF_THRESHOLD", "0.20"))
+PLATE_CONF_THRESHOLD = float(os.getenv("PLATE_CONF_THRESHOLD", "0.15"))
 VEHICLE_CONF_THRESHOLD = float(os.getenv("VEHICLE_CONF_THRESHOLD", "0.20"))
 
 COCO_VEHICLE_CLASS_MAP = {
@@ -65,6 +65,23 @@ def classify_vehicle_color_from_crop(crop_bgr: np.ndarray) -> str:
         return "Blue"
     else:
         return "Silver"
+
+
+def crop_license_plate(frame: np.ndarray, bbox: List[float], padding: int = 4) -> Optional[np.ndarray]:
+    """
+    Crops a license plate bounding box from a full video frame with boundary padding.
+    """
+    if frame is None or frame.size == 0 or not bbox:
+        return None
+    h, w = frame.shape[:2]
+    x1, y1, x2, y2 = [int(c) for c in bbox]
+    x1 = max(0, x1 - padding)
+    y1 = max(0, y1 - padding)
+    x2 = min(w, x2 + padding)
+    y2 = min(h, y2 + padding)
+    if x2 > x1 and y2 > y1:
+        return frame[y1:y2, x1:x2].copy()
+    return None
 
 
 def compute_iou(boxA: List[float], boxB: List[float]) -> float:
@@ -135,12 +152,10 @@ class VehicleTrack:
 class VehicleDetectorTracker:
     """
     Per-Camera Spatial Multi-Object Detector and Tracker with Dual-Engine ANPR.
-    Guarantees stable tracking across multi-stream cameras, webcam, and uploaded videos.
+    Uses YOLOv8 Vehicle Detector and fine-tuned YOLOv8 License Plate Localizer.
     """
     def __init__(self):
-        # camera_id -> { track_id -> VehicleTrack }
         self.camera_tracks: Dict[str, Dict[int, VehicleTrack]] = {}
-        # camera_id -> next_track_id
         self.next_track_ids: Dict[str, int] = {}
 
         try:
@@ -165,7 +180,7 @@ class VehicleDetectorTracker:
     ) -> List[Dict[str, Any]]:
         """
         Runs YOLOv8 detection, per-camera spatial tracking, dynamic color recognition,
-        and license plate localization.
+        and fine-tuned license plate localization and cropping.
         """
         if frame is None or frame.size == 0:
             return []
@@ -178,7 +193,7 @@ class VehicleDetectorTracker:
 
         active_camera_tracks = self.camera_tracks[camera_id]
 
-        # 1. Detect Vehicles with YOLO
+        # 1. Detect Vehicles with YOLOv8
         detected_vehicles = []
         try:
             veh_results = self.vehicle_model.predict(
@@ -208,7 +223,7 @@ class VehicleDetectorTracker:
         except Exception:
             pass
 
-        # 2. Detect Plates with Secondary Plate Model
+        # 2. Detect & Localize License Plates with fine-tuned YOLO model
         detected_plates = []
         try:
             plate_results = self.plate_model.predict(
@@ -230,7 +245,6 @@ class VehicleDetectorTracker:
         matched_track_ids = set()
         matched_detection_indices = set()
 
-        # For each incoming detection, find best matching active track (highest IoU or lowest centroid dist)
         for d_idx, det in enumerate(detected_vehicles):
             det_box = det["bbox"]
             det_cx = (det_box[0] + det_box[2]) / 2.0
@@ -248,7 +262,6 @@ class VehicleDetectorTracker:
                 tcy = (track.bbox[1] + track.bbox[3]) / 2.0
                 dist = np.sqrt((det_cx - tcx)**2 + (det_cy - tcy)**2)
 
-                # Matching criteria: IoU > 0.15 or centroid distance < 120 pixels
                 score = iou + (1.0 / (1.0 + dist / 50.0))
                 if (iou > 0.15 or dist < 120.0) and score > best_score:
                     best_score = score
@@ -264,14 +277,12 @@ class VehicleDetectorTracker:
                     break
 
             if best_tid is not None:
-                # Update existing track
                 active_camera_tracks[best_tid].update(
                     det["bbox"], det["vehicle_type"], det["color"], det["confidence"], matched_plate_box
                 )
                 matched_track_ids.add(best_tid)
                 matched_detection_indices.add(d_idx)
             else:
-                # Create new track
                 new_id = self._get_next_track_id(camera_id)
                 new_track = VehicleTrack(
                     new_id, camera_id, det["bbox"], det["vehicle_type"], det["color"], det["confidence"]
