@@ -40,7 +40,7 @@ def process_live_frame(payload: FrameProcessRequest) -> Dict[str, Any]:
         frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
         
         if frame is None or frame.size == 0:
-            return {"detections": [], "count": 0}
+            return {"detections": [], "count": 0, "camera_id": payload.camera_id}
 
         h, w = frame.shape[:2]
 
@@ -67,19 +67,21 @@ def process_live_frame(payload: FrameProcessRequest) -> Dict[str, Any]:
             conf = det.get("confidence", 0.90)
             
             if not plate_text and "plate_crop_bbox" in det and det["plate_crop_bbox"]:
-                px1, py1, px2, py2 = [int(c) for c in det["plate_crop_bbox"]]
-                px1, py1 = max(0, px1), max(0, py1)
-                px2, py2 = min(w, px2), min(h, py2)
-                
-                if px2 > px1 and py2 > py1:
-                    plate_crop = frame[py1:py2, px1:px2]
-                    easy_res = ocr_engine.run_single_engine(plate_crop) if ocr_engine else {"text": "", "confidence": 0.0}
-                    paddle_res = paddle_engine.run(plate_crop) if paddle_engine else {"text": "", "confidence": 0.0}
-                    fused = fuse_ocr_scores(paddle_res.get("text", ""), paddle_res.get("confidence", 0.0),
-                                            easy_res.get("text", ""), easy_res.get("confidence", 0.0))
-                    plate_text = fused.get("fused_text", "")
-                    if fused.get("confidence"):
-                        conf = fused.get("confidence")
+                try:
+                    px1, py1, px2, py2 = [int(c) for c in det["plate_crop_bbox"]]
+                    px1, py1 = max(0, px1), max(0, py1)
+                    px2, py2 = min(w, px2), min(h, py2)
+                    
+                    if px2 > px1 and py2 > py1:
+                        plate_crop = frame[py1:py2, px1:px2]
+                        if ocr_engine:
+                            easy_res = ocr_engine.run_single_engine(plate_crop)
+                            if easy_res.get("text"):
+                                plate_text = easy_res["text"]
+                                if easy_res.get("confidence"):
+                                    conf = max(conf, easy_res["confidence"])
+                except Exception:
+                    pass
 
             # Check if vehicle matches emergency or blacklist
             is_emergency = v_type.lower() in ["ambulance", "fire truck", "police"]
@@ -109,4 +111,4 @@ def process_live_frame(payload: FrameProcessRequest) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        return {"detections": [], "count": 0, "error": str(e)}
+        return {"detections": [], "count": 0, "error": str(e), "camera_id": payload.camera_id}
